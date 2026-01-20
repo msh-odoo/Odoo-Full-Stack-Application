@@ -1,0 +1,23 @@
+{
+    'name': 'Event & Service Management - Base',
+    'version': '1.0',
+    'category': 'Services',
+    'sequence': 2,
+    'summary': 'for event and service booking system',
+    'description': """Event/Service management.""",
+    'depends': ['base','mail','portal'],
+      'data': [
+        'security/ir.model.access.csv',
+        'data/data.xml',
+        'views/service_event_base_view.xml',
+        'views/service_event_category_views.xml',
+        'views/service_event_registration_views.xml',
+        'views/service_event_views.xml',
+        # 'views/event_tag_views.xml',
+        # 'views/res_partner_views.xml',
+    ],
+    'author': 'sujal asodariya',
+    'installable': True,
+    'application': True,
+    'license': 'LGPL-3',
+}

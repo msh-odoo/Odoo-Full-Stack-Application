@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="service_event_category_list" model="ir.ui.view">
+            <field name="name">event category list</field>
+            <field name="model">event.category</field>
+            <field name="arch" type="xml">
+                <list string="Event Categories">
+                    <field name="name"/>
+                    <field name="desciption"/>
+                    <field name="active"/>
+                </list>
+            </field>
+        </record>

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="event_registration_action" model="ir.actions.act_window">
+        <field name="name">Event Registration</field>
+        <field name="res_model">event.service.registration</field>
+        <field name="view_mode">list</field>
+    </record>
+
+    <record id="service_event_registration_view_list" model="ir.ui.view">
+        <field name="name">Event Registration</field>
+        <field name="model">event.registration</field>
+        <field name="arch" type="xml">
+            <list string="Events Registration">
+                <field name="name" />
+                <field name="state" />
+                <field name="seat_count" />
+                <field name="booking_date" />
+                <field name="amount" />
+                <field name="partner_id" />
+                <field name="company_id" />
+            </list>
+        </field>
+    </record>
+</odoo>
