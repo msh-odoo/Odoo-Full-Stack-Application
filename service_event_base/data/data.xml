@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<odoo>
+    <data noupdate="1">
+      <!-- <record id="event_category_business" model="event.category">
+            <field name="name">Business</field>
+            <field name="description">Business and professional events</field>
+            <field name="color">1</field>
+        </record>
+
+        <record id="event_category_technology" model="event.category">
+            <field name="name">Technology</field>
+            <field name="description">Technology and IT events</field>
+            <field name="color">2</field>
+        </record> -->
+    </data>
+</odoo>
+      
