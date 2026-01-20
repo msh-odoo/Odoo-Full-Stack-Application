@@ -1,0 +1,4 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_event_registration_manager,event.registration.manager,model_event_registration,group_event_manager,1,1,1,1
+access_event_service_manager,event.service.manager,model_event_service,group_event_manager,1,1,1,1
+access_event_category_manager,event.category.manager,model_event_category,group_event_manager,1,1,1,1
