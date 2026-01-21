@@ -1,0 +1,5 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+events_base.access_events_event,access_events_event,events_base.model_events_event,base.group_user,1,1,1,1
+events_base.access_events_booking,access_events_booking,events_base.model_events_booking,base.group_user,1,1,1,1
+events_base.access_events_tag,access_events_tag,events_base.model_events_tag,base.group_user,1,1,1,1
+events_base.access_events_category,access_events_category,events_base.model_events_category,base.group_user,1,1,1,1

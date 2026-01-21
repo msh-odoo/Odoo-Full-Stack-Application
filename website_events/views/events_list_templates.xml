@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+<template id="events_list_page" name="Events List Page">
+    <t t-call="website.layout">
+        <div class="container py-2">
+            <section>
+                <h3 class="">Events List</h3>
+            </section>
+            <div class="container">
+                <div class="row">
+                    <t t-foreach="events" t-as="event">
+                        <div class="col-sm-6 col-lg-3">
+                            <h5><t t-out="event.name"/></h5>
+                            <h5><t t-out="event.price"/></h5>
+                        </div>
+                    </t>
+                </div>
+            </div>
+        </div>
+        <div class="d-flex justify-content-center my-3">
+            <t t-call="website.pager"/>
+        </div>
+    </t>
+</template>
+</odoo>

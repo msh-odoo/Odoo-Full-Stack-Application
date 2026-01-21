@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <menuitem id="menu_events_base_root" name="Events" web_icon="events_base,static/description/icon.png">
+        <menuitem id="events_base_menu_test_parent" name="Events Views">
+            <menuitem id="menu_events_base_event"
+                      name="Events"
+                      action="action_events_base_event_list"/>
+            <menuitem id="menu_events_base_booking"
+                      name="Bookings"
+                      action="action_events_base_booking_list"/>
+        </menuitem>
+    </menuitem>
+</odoo>

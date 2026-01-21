@@ -1,0 +1,97 @@
+<odoo>
+    <record id="event_demo_1" model="events.event">
+        <field name="name">Frontend Bootcamp</field>
+        <field name="price">49.0</field>
+        <field name="website_published">True</field>
+        <field name="tag_ids" eval="[ref('tag_frontend'), ref('tag_workshop')]"/>
+        <field name="image" type="base64" file="website_events/static/src/img/event_img_1.jpg"></field>
+    </record>
+
+    <record id="event_demo_2" model="events.event">
+        <field name="name">Backend Mastery</field>
+        <field name="price">79.0</field>
+        <field name="website_published">True</field>
+        <field name="tag_ids" eval="[ref('tag_backend')]"/>
+        <field name="image" type="base64" file="website_events/static/src/img/event_img_2.jpg"></field>
+    </record>
+
+    <record id="event_demo_3" model="events.event">
+        <field name="name">Odoo Website Bootcamp</field>
+        <field name="price">59.0</field>
+        <field name="website_published">True</field>
+        <field name="tag_ids" eval="[ref('tag_frontend'), ref('tag_workshop')]"/>
+        <field name="image" type="base64" file="website_events/static/src/img/event_img_3.jpg"></field>
+    </record>
+
+    <record id="event_demo_4" model="events.event">
+        <field name="name">PostgreSQL for Odoo Devs</field>
+        <field name="price">69.0</field>
+        <field name="website_published">True</field>
+        <field name="tag_ids" eval="[ref('tag_backend'), ref('tag_performance')]"/>
+        <field name="image" type="base64" file="website_events/static/src/img/event_img_1.jpg"></field>
+    </record>
+
+    <record id="event_demo_5" model="events.event">
+        <field name="name">Odoo ORM Deep Dive</field>
+        <field name="price">89.0</field>
+        <field name="website_published">True</field>
+        <field name="tag_ids" eval="[ref('tag_backend'), ref('tag_performance')]"/>
+        <field name="image" type="base64" file="website_events/static/src/img/event_img_2.jpg"></field>
+    </record>
+
+    <record id="event_demo_6" model="events.event">
+        <field name="name">Odoo Security Essentials</field>
+        <field name="price">45.0</field>
+        <field name="website_published">True</field>
+        <field name="tag_ids" eval="[ref('tag_backend')]"/>
+        <field name="image" type="base64" file="website_events/static/src/img/event_img_3.jpg"></field>
+    </record>
+
+    <record id="event_demo_7" model="events.event">
+        <field name="name">Odoo JS Framework Basics</field>
+        <field name="price">55.0</field>
+        <field name="website_published">True</field>
+        <field name="tag_ids" eval="[ref('tag_frontend')]"/>
+        <field name="image" type="base64" file="website_events/static/src/img/event_img_1.jpg"></field>
+    </record>
+
+    <record id="event_demo_8" model="events.event">
+        <field name="name">Odoo QWeb Templates</field>
+        <field name="price">49.0</field>
+        <field name="website_published">True</field>
+        <field name="tag_ids" eval="[ref('tag_frontend')]"/>
+        <field name="image" type="base64" file="website_events/static/src/img/event_img_2.jpg"></field>
+    </record>
+
+    <record id="event_demo_9" model="events.event">
+        <field name="name">Odoo API Integration</field>
+        <field name="price">99.0</field>
+        <field name="website_published">True</field>
+        <field name="tag_ids" eval="[ref('tag_backend'), ref('tag_devops')]"/>
+        <field name="image" type="base64" file="website_events/static/src/img/event_img_3.jpg"></field>
+    </record>
+
+    <record id="event_demo_10" model="events.event">
+        <field name="name">Odoo Performance Tuning</field>
+        <field name="price">109.0</field>
+        <field name="website_published">True</field>
+        <field name="tag_ids" eval="[ref('tag_performance')]"/>
+        <field name="image" type="base64" file="website_events/static/src/img/event_img_1.jpg"></field>
+    </record>
+
+    <record id="event_demo_11" model="events.event">
+        <field name="name">Advanced Odoo Domains</field>
+        <field name="price">39.0</field>
+        <field name="website_published">True</field>
+        <field name="tag_ids" eval="[ref('tag_backend')]"/>
+        <field name="image" type="base64" file="website_events/static/src/img/event_img_2.jpg"></field>
+    </record>
+
+    <record id="event_demo_12" model="events.event">
+        <field name="name">Odoo Deployment Workshop</field>
+        <field name="price">79.0</field>
+        <field name="website_published">True</field>
+        <field name="tag_ids" eval="[ref('tag_workshop'), ref('tag_devops')]"/>
+        <field name="image" type="base64" file="website_events/static/src/img/event_img_1.jpg"></field>
+    </record>
+</odoo>

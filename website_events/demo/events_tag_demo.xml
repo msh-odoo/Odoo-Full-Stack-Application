@@ -1,0 +1,21 @@
+<odoo>
+    <record id="tag_workshop" model="events.tag">
+        <field name="name">Workshop</field>
+    </record>
+
+    <record id="tag_backend" model="events.tag">
+        <field name="name">Backend</field>
+    </record>
+
+    <record id="tag_frontend" model="events.tag">
+        <field name="name">Frontend</field>
+    </record>
+
+    <record id="tag_performance" model="events.tag">
+        <field name="name">Performance</field>
+    </record>
+
+    <record id="tag_devops" model="events.tag">
+        <field name="name">DevOps</field>
+    </record>
+</odoo>
