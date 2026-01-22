@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Menu Definitions - Placeholder
+
+PURPOSE:
+    Define application menu structure and navigation.
+
+ODOO MENU HIERARCHY:
+    1. Root menu (app icon in home screen)
+    2. Main menu items (top menu bar)
+    3. Sub-menu items (dropdown)
+
+MENU ATTRIBUTES:
+    - name: Display text
+    - parent_id: Parent menu (creates hierarchy)
+    - action: Action to execute when clicked
+    - sequence: Display order
+    - groups_id: Access control (which groups can see)
+
+THIS FILE WILL BE COMPLETED IN COMMIT 6 (Backend Views).
+Placeholder created for manifest dependency.
+-->
+<odoo>
+    <data>
+        
+        <!-- Application menus will be added in Commit 6 -->
+        
+    </data>
+</odoo>

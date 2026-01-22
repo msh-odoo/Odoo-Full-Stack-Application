@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Service Booking Views - Placeholder
+
+PURPOSE:
+    Define user interface views for service.booking model.
+
+THIS FILE WILL BE COMPLETED IN COMMIT 6 (Backend Views).
+Placeholder created for manifest dependency.
+-->
+<odoo>
+    <data>
+        
+        <!-- Service Booking views will be added in Commit 6 -->
+        
+    </data>
+</odoo>

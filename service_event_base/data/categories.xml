@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Service Event Categories Data
+
+PURPOSE:
+    Default service categories created during installation.
+    Populated by post_init_hook, this file is a placeholder.
+
+WHY BOTH HOOK AND XML:
+    - Hook creates categories programmatically (dynamic, conditional)
+    - XML could also create categories (declarative, static)
+    - We use hook to demonstrate post_init_hook usage
+    - XML alternative shown here for reference
+
+TRADE-OFFS:
+    Hook approach:
+        ✓ Can check existence before creating (idempotent)
+        ✓ Can use complex logic (conditions, loops)
+        ✓ Centralized in Python code
+        ✗ Not visible in XML (less transparent)
+        ✗ Requires Python knowledge to modify
+    
+    XML approach:
+        ✓ Declarative and visible
+        ✓ Easy to modify without Python
+        ✓ Odoo handles duplicate detection with xml_id
+        ✗ No conditional logic
+        ✗ Static data only
+
+BEST PRACTICE:
+    - Simple master data: Use XML with noupdate="1"
+    - Complex initialization: Use post_init_hook
+    - This module: Uses hook to demonstrate lifecycle concepts
+
+WHAT IS ir.model.data:
+    Odoo's registry of XML IDs → database IDs.
+    When you create a record with id="category_workshop":
+        1. Odoo creates the record in service_event_category table
+        2. Odoo creates an entry in ir_model_data linking:
+           - module: service_event_base
+           - name: category_workshop
+           - model: service.event.category
+           - res_id: actual database ID
+    
+    WHY ir.model.data:
+        - Enables referencing records across modules
+        - Prevents duplicate creation on reinstall
+        - Allows record lookup by XML ID
+        - Powers module upgrade and dependency resolution
+    
+    EXAMPLE:
+        self.env.ref('service_event_base.category_workshop')
+        → Returns the actual record object
+
+NOTE: Categories are created in hooks.py post_init_hook.
+      This file is kept for potential manual category additions.
+-->
+<odoo>
+    <data noupdate="1">
+        <!--
+        noupdate="1" because:
+            - Users may rename or customize categories
+            - Don't overwrite customizations on upgrade
+            - Categories created by hook anyway
+        -->
+        
+        <!-- Categories are created by post_init_hook -->
+        <!-- This file is a placeholder for manual additions -->
+        
+        <!--
+        EXAMPLE (not active):
+        <record id="category_workshop" model="service.event.category">
+            <field name="name">Workshops</field>
+            <field name="code">WORKSHOP</field>
+            <field name="description">Educational workshops and training sessions</field>
+        </record>
+        -->
+        
+    </data>
+</odoo>

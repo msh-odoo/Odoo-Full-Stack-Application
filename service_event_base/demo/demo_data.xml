@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Demo Data - Placeholder
+
+PURPOSE:
+    Sample data for testing and demonstration.
+    Only loaded when Odoo runs with demo mode.
+
+DEMO vs REGULAR DATA:
+    - Regular data (data/): Always loaded (categories, sequences)
+    - Demo data (demo/): Only loaded in demo mode
+
+WHY DEMO DATA:
+    - Pre-populate system for testing
+    - Showcase features to potential users
+    - Enable UI tests without manual data entry
+    - Never loaded in production
+
+THIS FILE WILL BE POPULATED in later commits with sample services and bookings.
+-->
+<odoo>
+    <data noupdate="1">
+        
+        <!-- Demo data will be added in later commits -->
+        
+    </data>
+</odoo>
