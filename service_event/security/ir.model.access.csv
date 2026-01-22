@@ -1,0 +1,5 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_service_event_booking_registration_desk,service.event.admin,model_service_event,base.group_user,1,1,1,1
+access_service_event_booking_registration_desk,service.event.admin,model_service_event_booking,base.group_user,1,1,1,1
+access_service_event_booking_registration_desk,service.event.admin,model_service_event_tag,base.group_user,1,1,1,1
+access_service_event_booking_registration_desk,service.event.admin,model_service_event_category,base.group_user,1,1,1,1

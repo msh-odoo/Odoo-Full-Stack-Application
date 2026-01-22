@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_service_event_tree" model="ir.ui.view">
+        <field name="name">service.event.tree</field>
+        <field name="model">service.event</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name" />
+            </list>
+        </field>
+    </record>
+
+    <record id="view_service_event_form" model="ir.ui.view">
+        <field name="name">service.event.form</field>
+        <field name="model">service.event</field>
+        <field name="arch" type="xml">
+            <form string="Service Event" create="0">
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="Draft"/></h1>
+                    </div>
+                    <group name="service_event_header">
+                        <group name="service_event_details">
+                            <field name="description"/>
+                            <field name="price"/>
+                            <field name="active"/>
+                            <field name="category_id"/>
+                            <field name="tag_ids" widget="many2many_tags"/>
+                            <field name="company_id"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Bookings">
+                            <field name="booking_ids">
+                                <list editable="bottom">
+                                    <field name="partner_id" />
+                                    <field name="quantity" />
+                                    <field name="booking_date" />
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+
+                <!-- <chatter/> -->
+            </form>
+        </field>
+    </record>
+    <record id="service_event_events_action" model="ir.actions.act_window">
+        <field name="name">Service Event</field>
+        <field name="res_model">service.event</field>
+    </record>
+</odoo>
