@@ -33,14 +33,22 @@ COMMIT 2 SCOPE:
             <field name="arch" type="xml">
                 <list string="Service Events">
                     <field name="name"/>
+                    <field name="state" widget="badge" 
+                           decoration-info="state=='draft'"
+                           decoration-success="state=='published'"
+                           decoration-warning="state=='registration_closed'"
+                           decoration-muted="state in ('completed', 'cancelled')"/>
                     <field name="category_id"/>
-                    <field name="price_unit"/>
+                    <field name="price_unit" optional="show"/>
+                    <field name="final_price" optional="show" widget="monetary"/>
                     <field name="currency_id" optional="hide"/>
                     <field name="capacity" optional="show"/>
                     <field name="booking_count" optional="show"/>
                     <field name="booking_count_confirmed" optional="show"/>
                     <field name="available_seats" optional="show"/>
-                    <field name="total_revenue" optional="hide"/>
+                    <field name="fill_rate" optional="hide" widget="progressbar"/>
+                    <field name="total_revenue" optional="hide" widget="monetary"/>
+                    <field name="registration_open" optional="hide" widget="boolean_toggle"/>
                     <field name="company_id" optional="hide"/>
                 </list>
             </field>
@@ -52,17 +60,48 @@ COMMIT 2 SCOPE:
             <field name="model">service.event</field>
             <field name="arch" type="xml">
                 <form string="Service Event">
+                    <header>
+                        <button name="action_publish" string="Publish" type="object"
+                                class="oe_highlight" invisible="state != 'draft'"/>
+                        <button name="action_close_registration" string="Close Registration" type="object"
+                                invisible="state != 'published'"/>
+                        <button name="action_mark_completed" string="Mark Completed" type="object"
+                                invisible="state not in ('published', 'registration_closed')"/>
+                        <button name="action_cancel_event" string="Cancel Event" type="object"
+                                invisible="state in ('completed', 'cancelled')"
+                                confirm="This will cancel all bookings. Are you sure?"/>
+                        <button name="action_reset_to_draft" string="Reset to Draft" type="object"
+                                invisible="state not in ('cancelled', 'completed')"/>
+                        <field name="state" widget="statusbar" 
+                               statusbar_visible="draft,published,registration_closed,completed"/>
+                    </header>
                     <sheet>
+                        <div class="oe_button_box" name="button_box">
+                            <button class="oe_stat_button" type="object" name="action_view_bookings" icon="fa-ticket">
+                                <field string="Bookings" name="booking_count" widget="statinfo"/>
+                            </button>
+                        </div>
                         <group>
                             <group>
                                 <field name="name"/>
                                 <field name="category_id"/>
                                 <field name="tag_ids" widget="many2many_tags" options="{'color_field': 'color'}"/>
+                                <field name="registration_open" widget="boolean_toggle"/>
                             </group>
                             <group>
-                                <field name="price_unit"/>
-                                <field name="currency_id" options="{'no_create': True}"/>
                                 <field name="company_id" options="{'no_create': True}"/>
+                            </group>
+                        </group>
+                        <group string="Pricing" name="pricing_group">
+                            <group>
+                                <field name="price_unit"/>
+                                <field name="early_bird_price"/>
+                                <field name="early_bird_deadline"/>
+                            </group>
+                            <group>
+                                <field name="discount_percentage"/>
+                                <field name="final_price" widget="monetary" readonly="1"/>
+                                <field name="currency_id" options="{'no_create': True}"/>
                             </group>
                         </group>
                         <group string="Capacity &amp; Availability" name="capacity_group">
@@ -83,6 +122,15 @@ COMMIT 2 SCOPE:
                             </group>
                             <group>
                                 <field name="duration" help="Event duration in hours"/>
+                            </group>
+                        </group>
+                        <group string="Business Metrics" name="metrics_group">
+                            <group>
+                                <field name="fill_rate" widget="percentage"/>
+                                <field name="revenue_per_seat" widget="monetary"/>
+                            </group>
+                            <group>
+                                <field name="cancellation_rate" widget="percentage"/>
                             </group>
                         </group>
                         <notebook>

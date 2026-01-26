@@ -18,16 +18,20 @@ COMMIT 2 SCOPE:
             <field name="model">service.booking</field>
             <field name="arch" type="xml">
                 <list string="Service Bookings" decoration-info="state=='draft'"
-                      decoration-success="state=='confirmed'" decoration-muted="state=='cancelled'">
+                      decoration-success="state=='confirmed'" decoration-muted="state=='cancelled'"
+                      decoration-warning="state=='waitlisted'">
                     <field name="booking_number"/>
                     <field name="partner_id"/>
                     <field name="event_id"/>
                     <field name="booking_date"/>
                     <field name="amount"/>
                     <field name="currency_id" optional="hide"/>
+                    <field name="is_waitlisted" optional="show"/>
+                    <field name="waitlist_position" optional="show" invisible="not is_waitlisted"/>
                     <field name="state" widget="badge" decoration-info="state=='draft'"
                            decoration-success="state in ('confirmed', 'done')"
-                           decoration-danger="state=='cancelled'"/>
+                           decoration-danger="state=='cancelled'"
+                           decoration-warning="state=='waitlisted'"/>
                 </list>
             </field>
         </record>
@@ -40,7 +44,9 @@ COMMIT 2 SCOPE:
                 <form string="Service Booking">
                     <header>
                         <button name="action_confirm" string="Confirm" type="object"
-                                class="oe_highlight" invisible="state != 'draft'"/>
+                                class="oe_highlight" invisible="state not in ('draft', 'waitlisted')"/>
+                        <button name="action_promote_from_waitlist" string="Promote from Waitlist" type="object"
+                                class="oe_highlight" invisible="state != 'waitlisted'"/>
                         <button name="action_done" string="Done" type="object"
                                 class="oe_highlight" invisible="state != 'confirmed'"/>
                         <button name="action_cancel" string="Cancel" type="object"
@@ -50,6 +56,10 @@ COMMIT 2 SCOPE:
                         <field name="state" widget="statusbar" statusbar_visible="draft,confirmed,done"/>
                     </header>
                     <sheet>
+                        <div class="alert alert-warning" role="alert" invisible="not is_waitlisted">
+                            <strong>Waitlisted:</strong> You are #<field name="waitlist_position" class="oe_inline"/> in line.
+                            You will be automatically confirmed when a spot opens.
+                        </div>
                         <div class="oe_title">
                             <h1>
                                 <field name="booking_number" readonly="1"/>

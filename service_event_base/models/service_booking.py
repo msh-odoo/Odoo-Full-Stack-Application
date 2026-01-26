@@ -202,6 +202,7 @@ class ServiceBooking(models.Model):
     state = fields.Selection(
         [
             ('draft', 'Draft'),
+            ('waitlisted', 'Waitlisted'),
             ('confirmed', 'Confirmed'),
             ('done', 'Done'),
             ('cancelled', 'Cancelled'),
@@ -231,9 +232,13 @@ class ServiceBooking(models.Model):
     #   - Creates mail.tracking.value records
     #
     # STATE WORKFLOW LOGIC:
-    #   Draft → Confirmed: action_confirm()
+    #   Draft → Waitlisted (if event full)
+    #   Draft → Confirmed (if space available): action_confirm()
+    #   Waitlisted → Confirmed (when spot opens): action_confirm()
     #   Confirmed → Done: action_done()
     #   * → Cancelled: action_cancel()
+    #
+    # Added 'waitlisted' state for capacity management
     #
     # BEST PRACTICES:
     #   - Use lowercase_underscore for database values
@@ -245,6 +250,65 @@ class ServiceBooking(models.Model):
     #   - Could use Many2one to separate state table (overkill for simple workflows)
     #   - Could use Integer with constants (less readable)
     # ========================================================================
+
+    # ========================================================================
+    # WAITLIST MANAGEMENT
+    # ========================================================================
+
+    is_waitlisted = fields.Boolean(
+        string='On Waitlist',
+        compute='_compute_is_waitlisted',
+        store=True,
+        help='Automatically set when event is at capacity',
+    )
+    # WHY: Quick filter for waitlisted bookings
+    # HOW: Derived from state = 'waitlisted'
+    # STORED: For fast searches "show all waitlisted bookings"
+
+    waitlist_position = fields.Integer(
+        string='Waitlist Position',
+        compute='_compute_waitlist_position',
+        store=False,
+        help='Position in waitlist queue (1 = next in line)',
+    )
+    # WHY: Show customers their position in waitlist
+    # HOW: Order waitlisted bookings by create_date
+    # NON-STORED: Real-time position (changes as others cancel)
+
+    @api.depends('state')
+    def _compute_is_waitlisted(self):
+        """Flag bookings that are waitlisted."""
+        for booking in self:
+            booking.is_waitlisted = (booking.state == 'waitlisted')
+
+    @api.depends('event_id', 'event_id.booking_ids', 'event_id.booking_ids.state', 'event_id.booking_ids.create_date')
+    def _compute_waitlist_position(self):
+        """
+        Calculate position in waitlist queue.
+
+        LOGIC:
+            - Only for waitlisted bookings
+            - Ordered by creation date (first-come-first-served)
+            - Position 1 = next to be promoted
+
+        BUSINESS USE:
+            - Show customer: "You are #3 in line"
+            - Auto-promote: promote position 1 when spot opens
+        """
+        for booking in self:
+            if booking.state == 'waitlisted' and booking.event_id:
+                # Get all waitlisted bookings for this event, ordered by creation date
+                waitlisted = booking.event_id.booking_ids.filtered(
+                    lambda b: b.state == 'waitlisted'
+                ).sorted('create_date')
+
+                # Find position in queue (1-indexed)
+                try:
+                    booking.waitlist_position = list(waitlisted.ids).index(booking.id) + 1
+                except ValueError:
+                    booking.waitlist_position = 0
+            else:
+                booking.waitlist_position = 0
 
     # ========================================================================
     # DATE/TIME FIELDS
@@ -280,7 +344,7 @@ class ServiceBooking(models.Model):
     #   - Server in UTC sees today = Jan 23 at 2am
     #   - context_today ensures consistent UX
     #
-    # COMMIT 3: DEFAULT VALUE FUNCTIONS
+    # DEFAULT VALUE FUNCTIONS
     # DEFAULT PATTERNS DEMONSTRATED:
     #   1. Static default: default='draft'
     #   2. Function reference: default=fields.Date.context_today
@@ -468,6 +532,15 @@ class ServiceBooking(models.Model):
                     'service.booking'
                 ) or _('New')
 
+            # Auto-set amount from event's applicable price
+            if 'event_id' in vals and 'amount' not in vals:
+                event = self.env['service.event'].browse(vals['event_id'])
+                booking_date = vals.get('booking_date') or fields.Date.context_today(self)
+                # Convert string date to Date object if needed
+                if isinstance(booking_date, str):
+                    booking_date = fields.Date.to_date(booking_date)
+                vals['amount'] = event.get_applicable_price(booking_date)
+
         return super().create(vals_list)
 
     # ========================================================================
@@ -485,9 +558,49 @@ class ServiceBooking(models.Model):
         USAGE:
             - Called from button in form view
             - Can be called programmatically: booking.action_confirm()
+
+        ENHANCEMENTS:
+            - Validate event allows bookings
+            - Auto-waitlist if capacity full
+            - Check for duplicate bookings
         """
-        self.ensure_one()  # Ensure single record (not recordset)
-        self.write({'state': 'confirmed'})
+        for booking in self:
+            # Validate event allows bookings
+            allowed, reason = booking.event_id.check_booking_allowed()
+
+            if not allowed:
+                # Event is full - auto-waitlist instead of confirming
+                if 'full capacity' in reason.lower():
+                    booking.write({'state': 'waitlisted'})
+                    return {
+                        'type': 'ir.actions.client',
+                        'tag': 'display_notification',
+                        'params': {
+                            'title': _('Added to Waitlist'),
+                            'message': _(f'Booking {booking.booking_number} added to waitlist. '
+                                       f'You are #{booking.waitlist_position} in line.'),
+                            'type': 'warning',
+                            'sticky': False,
+                        }
+                    }
+                else:
+                    raise ValidationError(reason)
+
+            # Check for duplicate booking (same customer + event)
+            duplicate = self.search([
+                ('partner_id', '=', booking.partner_id.id),
+                ('event_id', '=', booking.event_id.id),
+                ('state', 'in', ['confirmed', 'done']),
+                ('id', '!=', booking.id),
+            ], limit=1)
+
+            if duplicate:
+                raise ValidationError(
+                    f"Customer {booking.partner_id.name} already has a confirmed booking "
+                    f"({duplicate.booking_number}) for event '{booking.event_id.name}'"
+                )
+
+            booking.write({'state': 'confirmed'})
 
     def action_done(self):
         """Mark booking as done (event completed)."""
@@ -495,9 +608,73 @@ class ServiceBooking(models.Model):
         self.write({'state': 'done'})
 
     def action_cancel(self):
-        """Cancel the booking."""
+        """
+        Cancel the booking.
+
+        ENHANCEMENTS:
+            - Promote from waitlist if spot opens
+            - Track cancellation for metrics
+        """
+        for booking in self:
+            was_confirmed = booking.state == 'confirmed'
+            event = booking.event_id
+
+            booking.write({'state': 'cancelled'})
+
+            # If confirmed booking was cancelled, check waitlist
+            if was_confirmed and event:
+                event._promote_from_waitlist()
+
+        return True
+
+    def action_draft(self):
+        """Reset to draft (for corrections)."""
         self.ensure_one()
-        self.write({'state': 'cancelled'})
+        self.write({'state': 'draft'})
+
+    # ========================================================================
+    # BUSINESS HELPER METHODS
+    # ========================================================================
+
+    def action_promote_from_waitlist(self):
+        """
+        Manually promote this booking from waitlist to confirmed.
+
+        USE CASE:
+            - Admin manually promotes waitlisted customer
+            - Overbook intentionally (e.g., expecting cancellations)
+
+        VALIDATION:
+            - Must be in waitlisted state
+            - Event should have capacity (warning if not)
+        """
+        self.ensure_one()
+
+        if self.state != 'waitlisted':
+            raise ValidationError(
+                f"Cannot promote booking {self.booking_number}: Not in waitlisted state"
+            )
+
+        # Check capacity (warning, not blocking)
+        if self.event_id.capacity > 0:
+            if self.event_id.booking_count_confirmed >= self.event_id.capacity:
+                # Allow but warn
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': _('Overbooking Warning'),
+                        'message': _(
+                            f'Event is at capacity ({self.event_id.capacity}). '
+                            f'Promoting anyway (manual override).'
+                        ),
+                        'type': 'warning',
+                        'sticky': True,
+                    }
+                }
+
+        self.write({'state': 'confirmed'})
+        return True
 
     def action_draft(self):
         """Reset to draft (for corrections)."""
@@ -544,7 +721,7 @@ class ServiceBooking(models.Model):
     ]
 
     # ========================================================================
-    # COMMIT 3: ONCHANGE METHODS
+    # ONCHANGE METHODS
     # ========================================================================
 
     @api.onchange('event_id')
@@ -608,9 +785,9 @@ class ServiceBooking(models.Model):
             }
         """
         if self.event_id:
-            # Auto-populate amount from event price
-            # Note: _compute_amount also does this, but onchange is immediate
-            self.amount = self.event_id.price_unit
+            # Auto-populate amount using applicable price (early bird + discount)
+            booking_date = self.booking_date or fields.Date.context_today(self)
+            self.amount = self.event_id.get_applicable_price(booking_date)
 
             # Check availability and warn if low
             if hasattr(self.event_id, 'available_seats'):

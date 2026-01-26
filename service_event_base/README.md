@@ -12,44 +12,57 @@
 
 - ✅ **Commit 1** (COMPLETE): Module Foundation + Hooks
 - ✅ **Commit 2** (COMPLETE): Core Models + ORM  
-- 🔄 **Commit 3** (CURRENT): Advanced Computed Fields + Constraints
-- ⏳ **Commit 4**: Business Logic Layer
+- ✅ **Commit 3** (COMPLETE): Advanced Computed Fields + Constraints
+- 🔄 **Commit 4** (CURRENT): Business Logic Layer
 - ⏳ **Commit 5**: Security + Access Control
 - ⏳ **Commit 6**: Views + UI Enhancement
 - ⏳ **Commit 7**: Reports + Email Templates
 - ⏳ **Commit 8**: Wizards + Workflows
 - ⏳ **Commit 9-17**: Advanced features
 
-### Commit 3 Features (Advanced Computed Fields + Constraints)
+### Commit 4 Features (Business Logic Layer)
 
 **Service Event Model Enhancements:**
-- ✅ Capacity management (capacity field)
-- ✅ Advanced computed fields with multiple dependencies
-  - booking_count_confirmed (stored)
-  - total_revenue (stored, Monetary)
-  - available_seats (non-stored, real-time)
-- ✅ Datetime scheduling fields
-  - start_datetime, end_datetime, duration
-  - Inverse function on end_datetime (bidirectional computation)
-- ✅ Complex Python constraints
-  - Capacity validation (prevent overbooking)
-  - Datetime range validation
-  - Price consistency checks
-- ✅ SQL constraints for data integrity
+- ✅ Pricing logic
+  - Early bird pricing (early_bird_price, early_bird_deadline)
+  - Discount percentage (discount_percentage)
+  - Final price computation (final_price)
+  - Price calculation method (get_applicable_price)
+- ✅ Event lifecycle management
+  - State workflow (draft → published → registration_closed → completed/cancelled)
+  - Lifecycle action methods (publish, close_registration, mark_completed, cancel, reset_to_draft)
+  - Registration status (registration_open computed field)
+- ✅ Business metrics
+  - Fill rate (% of capacity filled)
+  - Revenue per seat
+  - Cancellation rate
+- ✅ Business validation
+  - Early bird price must be < regular price
+  - Early bird deadline must be before event start
+  - Prevent publishing without price/category
+  - Check booking allowed method
 
 **Service Booking Model Enhancements:**
-- ✅ Onchange methods for UX improvement
-  - Auto-populate amount from event
-  - Show availability warnings
-  - Weekend booking warnings
-- ✅ Default value functions demonstrated
-  - context_today for dates
-  - Lambda for company_id
+- ✅ Waitlist management
+  - Waitlisted state added to workflow
+  - Auto-waitlist when event full
+  - Waitlist position tracking
+  - Auto-promotion when spots open
+  - Manual promotion method
+- ✅ Enhanced booking validation
+  - Check event is published and registration open
+  - Prevent duplicate bookings (same customer + event)
+  - Auto-populate amount from event price
+  - Validate event hasn't started
+- ✅ Business logic
+  - Cascade cancellation (event cancelled → bookings cancelled)
+  - Auto-promotion from waitlist on cancellation
 
 **Views Updated:**
-- ✅ Event list view: capacity, booking stats, revenue
-- ✅ Event form view: capacity tracking group, schedule group
-- ✅ Booking views: onchange methods work automatically
+- ✅ Event list: state badges, pricing fields, business metrics
+- ✅ Event form: lifecycle status bar with action buttons, pricing section, metrics dashboard
+- ✅ Booking list: waitlist state and position
+- ✅ Booking form: waitlist alert, promote button
 
 ## Overview
 

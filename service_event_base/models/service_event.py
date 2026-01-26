@@ -34,6 +34,7 @@ WHY THIS DESIGN:
 """
 
 from odoo import api, fields, models
+from odoo.exceptions import ValidationError
 
 
 class ServiceEvent(models.Model):
@@ -123,10 +124,10 @@ class ServiceEvent(models.Model):
     # ========================================================================
 
     price_unit = fields.Float(
-        string='Price',
+        string='Regular Price',
         digits='Product Price',  # Uses decimal precision from settings
         default=0.0,
-        help='Price per booking for this event',
+        help='Regular price per booking for this event',
     )
     # WHY Float not Monetary: Monetary requires currency_id field
     # WHY digits='Product Price': Standard Odoo precision (usually 2 decimals)
@@ -143,6 +144,193 @@ class ServiceEvent(models.Model):
     # WHY default to company currency: Most common use case
     # HOW lambda works: Executes at record creation time, not module load
     # ALTERNATIVE: Could be required=True to enforce currency selection
+
+    # ========================================================================
+    # PRICING LOGIC
+    # ========================================================================
+
+    early_bird_price = fields.Float(
+        string='Early Bird Price',
+        digits='Product Price',
+        default=0.0,
+        help='Discounted price for early bookings (0 = no early bird discount)',
+    )
+    # WHY: Encourage early registrations, reward early adopters
+    # PATTERN: Common in events (conferences, workshops)
+    # WHEN: Used if booking_date <= early_bird_deadline
+
+    early_bird_deadline = fields.Date(
+        string='Early Bird Deadline',
+        help='Last date to get early bird pricing',
+    )
+    # WHY: Creates urgency for bookings
+    # BUSINESS LOGIC: After this date, regular price applies
+    # EXAMPLE: "Register by Jan 15 for $99 (regular $149)"
+
+    discount_percentage = fields.Float(
+        string='Discount %',
+        digits=(5, 2),  # 5 total digits, 2 decimals (allows 0.00 to 100.00)
+        default=0.0,
+        help='Percentage discount applied to regular price (0-100)',
+    )
+    # WHY: Flexible discounting (promotions, bulk discounts, member discounts)
+    # HOW: final_price = price_unit * (1 - discount_percentage/100)
+    # VALIDATION: Should be 0-100 (checked in constraint)
+
+    final_price = fields.Monetary(
+        string='Final Price',
+        currency_field='currency_id',
+        compute='_compute_final_price',
+        store=True,
+        help='Computed price after discounts and early bird',
+    )
+    # ========================================================================
+    # PRICING COMPUTATION LOGIC
+    # ========================================================================
+    # FORMULA:
+    #   1. Start with price_unit (regular price)
+    #   2. Apply early bird if before deadline: use early_bird_price
+    #   3. Apply discount percentage: price * (1 - discount%/100)
+    #   4. Result = final_price
+    #
+    # EXAMPLES:
+    #   Regular: $100, No discounts → $100
+    #   Early bird: $100 regular, $75 early → $75 (if before deadline)
+    #   Discount: $100, 20% off → $80
+    #   Both: $100, early $75, 10% off → $67.50 (early bird + discount)
+    #
+    # WHY Monetary: Proper currency formatting, multi-currency support
+    # WHY stored: Used in reports, revenue calculations
+    # ========================================================================
+
+    @api.depends('price_unit', 'early_bird_price', 'early_bird_deadline', 'discount_percentage')
+    def _compute_final_price(self):
+        """
+        Compute final price with early bird and discount logic.
+        
+        BUSINESS RULES:
+            1. Early bird price takes precedence if conditions met
+            2. Discount percentage applies to selected base price
+            3. Early bird requires both price AND deadline set
+            4. Discount cannot exceed 100% (validated by constraint)
+        
+        PRIORITY:
+            Early bird (if applicable) → Discount % → Final price
+        
+        REAL-WORLD SCENARIO:
+            Event: "Python Workshop"
+            Regular: $149
+            Early bird: $99 (until Jan 15)
+            Additional discount: 10% for members
+            
+            Customer books Jan 10 with member discount:
+                Base: $99 (early bird)
+                Discount: $99 * 10% = $9.90
+                Final: $89.10
+        """
+        from odoo import fields as odoo_fields
+        
+        for event in self:
+            base_price = event.price_unit
+            
+            # Check if early bird pricing applies
+            if event.early_bird_price > 0 and event.early_bird_deadline:
+                today = odoo_fields.Date.context_today(event)
+                if today <= event.early_bird_deadline:
+                    base_price = event.early_bird_price
+            
+            # Apply discount percentage
+            if event.discount_percentage > 0:
+                discount_amount = base_price * (event.discount_percentage / 100.0)
+                final = base_price - discount_amount
+            else:
+                final = base_price
+            
+            event.final_price = final
+
+    # ========================================================================
+    # LIFECYCLE & STATUS FIELDS
+    # ========================================================================
+
+    state = fields.Selection(
+        [
+            ('draft', 'Draft'),
+            ('published', 'Published'),
+            ('registration_closed', 'Registration Closed'),
+            ('completed', 'Completed'),
+            ('cancelled', 'Cancelled'),
+        ],
+        string='Status',
+        default='draft',
+        required=True,
+        tracking=True,
+        help='Event lifecycle state',
+    )
+    # ========================================================================
+    # EVENT LIFECYCLE STATES
+    # ========================================================================
+    # draft: Event being prepared, not visible to customers
+    # published: Event live, accepting bookings
+    # registration_closed: Event visible but not accepting new bookings
+    # completed: Event finished, historical record
+    # cancelled: Event cancelled, bookings may be refunded
+    #
+    # WORKFLOW:
+    #   draft → published → registration_closed → completed
+    #   Any state → cancelled (cancellation possible anytime)
+    #
+    # BUSINESS RULES:
+    #   - Only published events accept bookings
+    #   - Can close registration manually or auto (capacity reached)
+    #   - Completed events used for analytics/history
+    #   - Cancelled events trigger booking cancellations
+    # ========================================================================
+
+    registration_open = fields.Boolean(
+        string='Registration Open',
+        compute='_compute_registration_open',
+        store=False,
+        help='Whether event is accepting new bookings',
+    )
+    # WHY computed: Derived from state + capacity + other factors
+    # WHY non-stored: Real-time status check
+    # LOGIC: published state + not at capacity + not past event date
+
+    @api.depends('state', 'capacity', 'booking_count_confirmed', 'start_datetime')
+    def _compute_registration_open(self):
+        """
+        Determine if event is accepting new bookings.
+        
+        CONDITIONS (ALL must be true):
+            1. State = 'published'
+            2. Not at capacity (or unlimited capacity)
+            3. Event hasn't started yet (if start_datetime set)
+        
+        USED IN:
+            - UI to show/hide booking button
+            - Validation before creating booking
+            - Website filtering (show only open events)
+        """
+        from odoo import fields as odoo_fields
+        
+        for event in self:
+            is_open = False
+            
+            if event.state == 'published':
+                # Check capacity
+                has_capacity = True
+                if event.capacity > 0:
+                    has_capacity = event.booking_count_confirmed < event.capacity
+                
+                # Check if event hasn't started
+                not_started = True
+                if event.start_datetime:
+                    now = odoo_fields.Datetime.now()
+                    not_started = event.start_datetime > now
+                
+                is_open = has_capacity and not_started
+            
+            event.registration_open = is_open
 
     # ========================================================================
     # MANY2ONE RELATIONSHIP - CATEGORY
@@ -270,7 +458,7 @@ class ServiceEvent(models.Model):
             event.booking_count = len(event.booking_ids)
 
     # ========================================================================
-    # COMMIT 3: ADVANCED COMPUTED FIELDS
+    # ADVANCED COMPUTED FIELDS
     # ========================================================================
 
     capacity = fields.Integer(
@@ -377,7 +565,7 @@ class ServiceEvent(models.Model):
                 event.available_seats = -1  # -1 = unlimited
 
     # ========================================================================
-    # COMMIT 3: INVERSE FUNCTIONS FOR COMPUTED FIELDS
+    # INVERSE FUNCTIONS FOR COMPUTED FIELDS
     # ========================================================================
 
     start_datetime = fields.Datetime(
@@ -482,6 +670,94 @@ class ServiceEvent(models.Model):
     #
     # ALTERNATIVE: Make required=True to enforce company assignment
     # ========================================================================
+
+    # ========================================================================
+    # BUSINESS METRICS
+    # ========================================================================
+
+    fill_rate = fields.Float(
+        string='Fill Rate (%)',
+        compute='_compute_business_metrics',
+        store=False,
+        digits=(5, 2),
+        help='Percentage of capacity filled (confirmed bookings / capacity * 100)',
+    )
+    # WHY: Key performance indicator for event success
+    # FORMULA: (confirmed_bookings / capacity) * 100
+    # EXAMPLE: 15 bookings / 20 capacity = 75% fill rate
+    # BUSINESS USE: Target 80%+ fill rate for profitability
+
+    revenue_per_seat = fields.Monetary(
+        string='Revenue per Seat',
+        currency_field='currency_id',
+        compute='_compute_business_metrics',
+        store=False,
+        help='Average revenue per capacity seat (total_revenue / capacity)',
+    )
+    # WHY: Measure revenue efficiency
+    # FORMULA: total_revenue / capacity
+    # EXAMPLE: $3,000 revenue / 20 seats = $150/seat
+    # BUSINESS USE: Compare across events, optimize pricing
+
+    cancellation_rate = fields.Float(
+        string='Cancellation Rate (%)',
+        compute='_compute_business_metrics',
+        store=False,
+        digits=(5, 2),
+        help='Percentage of bookings that were cancelled',
+    )
+    # WHY: Track customer satisfaction and overbooking strategy
+    # FORMULA: (cancelled_bookings / total_bookings) * 100
+    # BUSINESS USE: High cancellation = pricing/expectation issues
+
+    @api.depends('capacity', 'booking_count_confirmed', 'total_revenue', 'booking_ids', 'booking_ids.state')
+    def _compute_business_metrics(self):
+        """
+        Compute key business performance indicators.
+        
+        METRICS:
+            fill_rate: How full is the event? (confirmed / capacity)
+            revenue_per_seat: Revenue efficiency (revenue / capacity)
+            cancellation_rate: Customer retention (cancelled / total)
+        
+        BUSINESS APPLICATIONS:
+            - Dashboard KPIs
+            - Performance reports
+            - Pricing optimization
+            - Event comparison
+            - Historical trends
+        
+        REAL-WORLD EXAMPLE:
+            Event: "Python Workshop"
+            Capacity: 20
+            Confirmed: 18
+            Revenue: $2,700
+            Cancelled: 2 (out of 20 total bookings)
+            
+            fill_rate = 90% (18/20 * 100)
+            revenue_per_seat = $135 ($2,700/20)
+            cancellation_rate = 10% (2/20 * 100)
+        """
+        for event in self:
+            # Fill Rate
+            if event.capacity > 0:
+                event.fill_rate = (event.booking_count_confirmed / event.capacity) * 100
+            else:
+                event.fill_rate = 0.0
+            
+            # Revenue per Seat
+            if event.capacity > 0:
+                event.revenue_per_seat = event.total_revenue / event.capacity
+            else:
+                event.revenue_per_seat = 0.0
+            
+            # Cancellation Rate
+            total_bookings = len(event.booking_ids)
+            if total_bookings > 0:
+                cancelled_bookings = len(event.booking_ids.filtered(lambda b: b.state == 'cancelled'))
+                event.cancellation_rate = (cancelled_bookings / total_bookings) * 100
+            else:
+                event.cancellation_rate = 0.0
 
     # ========================================================================
     # MAGICAL FIELDS - AUTOMATICALLY PROVIDED BY ODOO
@@ -589,6 +865,16 @@ class ServiceEvent(models.Model):
             'Price must be positive or zero'
         ),
         (
+            'positive_early_bird_price',
+            'CHECK (early_bird_price >= 0)',
+            'Early bird price must be positive or zero'
+        ),
+        (
+            'valid_discount',
+            'CHECK (discount_percentage >= 0 AND discount_percentage <= 100)',
+            'Discount must be between 0 and 100 percent'
+        ),
+        (
             'positive_capacity',
             'CHECK (capacity >= 0)',
             'Capacity cannot be negative'
@@ -605,7 +891,7 @@ class ServiceEvent(models.Model):
     # WHEN to use Python: Complex multi-field validation
 
     # ========================================================================
-    # COMMIT 3: COMPLEX PYTHON CONSTRAINTS
+    # COMPLEX PYTHON CONSTRAINTS
     # ========================================================================
 
     @api.constrains('capacity', 'booking_count_confirmed')
@@ -705,3 +991,312 @@ class ServiceEvent(models.Model):
                     # Note: In production, might just log this instead of raising
                     # For education, we demonstrate the pattern
                     pass  # Allow, but could raise warning in future
+
+    # ========================================================================
+    # BUSINESS LOGIC CONSTRAINTS
+    # ========================================================================
+
+    @api.constrains('early_bird_price', 'price_unit')
+    def _check_early_bird_price(self):
+        """
+        Validate early bird price is less than regular price.
+        
+        BUSINESS RULE:
+            Early bird pricing should offer a discount, not increase price.
+        
+        VALIDATION:
+            If early_bird_price set, must be < price_unit
+            If early_bird_price = 0, validation skipped (no early bird)
+        """
+        for event in self:
+            if event.early_bird_price > 0 and event.early_bird_price >= event.price_unit:
+                raise ValidationError(
+                    f"Early bird price (${event.early_bird_price:.2f}) must be less than "
+                    f"regular price (${event.price_unit:.2f}) for event '{event.name}'"
+                )
+
+    @api.constrains('early_bird_deadline', 'start_datetime')
+    def _check_early_bird_deadline(self):
+        """
+        Ensure early bird deadline is before event start.
+        
+        BUSINESS LOGIC:
+            Can't offer early bird pricing after event has started.
+        """
+        for event in self:
+            if event.early_bird_deadline and event.start_datetime:
+                # Convert date to datetime for comparison
+                from datetime import datetime, time
+                deadline_dt = datetime.combine(event.early_bird_deadline, time.max)
+                
+                if deadline_dt >= event.start_datetime:
+                    raise ValidationError(
+                        f"Early bird deadline must be before event start time for '{event.name}'"
+                    )
+
+    # ========================================================================
+    # LIFECYCLE METHODS
+    # ========================================================================
+
+    def action_publish(self):
+        """
+        Publish event (make available for booking).
+        
+        BUSINESS RULES:
+            - Event must have price set
+            - Event must have capacity set (or 0 for unlimited)
+            - Event must have category
+        
+        STATE TRANSITION:
+            draft → published
+        
+        EFFECTS:
+            - Event visible on website
+            - Customers can book
+            - registration_open becomes True
+        """
+        for event in self:
+            # Validation
+            if not event.price_unit and not event.final_price:
+                raise ValidationError(f"Cannot publish '{event.name}': Price must be set")
+            
+            if not event.category_id:
+                raise ValidationError(f"Cannot publish '{event.name}': Category must be set")
+            
+            event.write({'state': 'published'})
+        
+        return True
+
+    def action_close_registration(self):
+        """
+        Close registration (stop accepting new bookings).
+        
+        USE CASES:
+            - Manually close when prep work starts
+            - Event is full (auto-triggered)
+            - Last-minute changes needed
+        
+        STATE TRANSITION:
+            published → registration_closed
+        
+        EFFECTS:
+            - Event still visible but can't book
+            - Existing bookings unaffected
+            - registration_open becomes False
+        """
+        self.write({'state': 'registration_closed'})
+        return True
+
+    def action_mark_completed(self):
+        """
+        Mark event as completed (event has occurred).
+        
+        USE CASES:
+            - Event date has passed
+            - Manual marking after event concludes
+        
+        STATE TRANSITION:
+            registration_closed → completed
+            published → completed (if registration wasn't closed first)
+        
+        EFFECTS:
+            - Event archived from active lists
+            - Used for historical reporting
+            - Bookings remain for attendance tracking
+        """
+        self.write({'state': 'completed'})
+        return True
+
+    def action_cancel_event(self):
+        """
+        Cancel the event.
+        
+        BUSINESS IMPACT:
+            - All bookings should be cancelled
+            - Refunds may be needed
+            - Notifications sent to customers
+        
+        STATE TRANSITION:
+            Any state → cancelled
+        
+        CASCADE EFFECTS:
+            - Cancel all associated bookings
+            - Could trigger refund workflow
+            - Could send cancellation emails
+        """
+        for event in self:
+            # Cancel all non-cancelled bookings
+            bookings_to_cancel = event.booking_ids.filtered(
+                lambda b: b.state != 'cancelled'
+            )
+            if bookings_to_cancel:
+                bookings_to_cancel.action_cancel()
+            
+            event.write({'state': 'cancelled'})
+        
+        return True
+
+    def action_reset_to_draft(self):
+        """
+        Reset event to draft status.
+        
+        USE CASE:
+            - Unpublish event for major changes
+            - Reuse cancelled event
+        
+        VALIDATION:
+            - Cannot reset if confirmed bookings exist
+        """
+        for event in self:
+            if event.booking_count_confirmed > 0:
+                raise ValidationError(
+                    f"Cannot reset '{event.name}' to draft: "
+                    f"{event.booking_count_confirmed} confirmed bookings exist"
+                )
+            
+            event.write({'state': 'draft'})
+        
+        return True
+
+    # ========================================================================
+    # BUSINESS HELPER METHODS
+    # ========================================================================
+
+    def get_applicable_price(self, booking_date=None):
+        """
+        Calculate price applicable for a specific booking date.
+        
+        PARAMETERS:
+            booking_date: Date of booking (default: today)
+        
+        RETURNS:
+            Float: Price applicable on that date
+        
+        BUSINESS LOGIC:
+            - Check if early bird deadline applies
+            - Apply discount percentage
+            - Return final calculated price
+        
+        USAGE:
+            price = event.get_applicable_price(fields.Date.today())
+            booking.create({'amount': price})
+        """
+        self.ensure_one()
+        
+        from odoo import fields as odoo_fields
+        if booking_date is None:
+            booking_date = odoo_fields.Date.context_today(self)
+        
+        base_price = self.price_unit
+        
+        # Check early bird
+        if self.early_bird_price > 0 and self.early_bird_deadline:
+            if booking_date <= self.early_bird_deadline:
+                base_price = self.early_bird_price
+        
+        # Apply discount
+        if self.discount_percentage > 0:
+            discount_amount = base_price * (self.discount_percentage / 100.0)
+            final = base_price - discount_amount
+        else:
+            final = base_price
+        
+        return final
+
+    def check_booking_allowed(self):
+        """
+        Check if new bookings are allowed for this event.
+        
+        RETURNS:
+            (bool, str): (allowed, reason_if_not_allowed)
+        
+        BUSINESS RULES CHECKED:
+            1. Event must be published
+            2. Must have capacity (or unlimited)
+            3. Event must not have started
+            4. Registration must be open
+        
+        USAGE:
+            allowed, reason = event.check_booking_allowed()
+            if not allowed:
+                raise ValidationError(reason)
+        """
+        self.ensure_one()
+        
+        if self.state != 'published':
+            return False, f"Event '{self.name}' is not published (current state: {self.state})"
+        
+        if not self.registration_open:
+            return False, f"Registration is closed for '{self.name}'"
+        
+        if self.capacity > 0 and self.booking_count_confirmed >= self.capacity:
+            return False, f"Event '{self.name}' is at full capacity ({self.capacity} seats)"
+        
+        if self.start_datetime:
+            from odoo import fields as odoo_fields
+            now = odoo_fields.Datetime.now()
+            if self.start_datetime <= now:
+                return False, f"Event '{self.name}' has already started"
+        
+        return True, ""
+
+    def _promote_from_waitlist(self):
+        """
+        Automatically promote first person from waitlist when spot opens.
+        
+        TRIGGERED BY:
+            - Confirmed booking cancelled
+            - Capacity increased
+        
+        BUSINESS LOGIC:
+            - Find oldest waitlisted booking (FIFO)
+            - Promote to confirmed
+            - Could send notification email
+        
+        USAGE:
+            booking.action_cancel()  # Frees a spot
+            event._promote_from_waitlist()  # Auto-promotes next in line
+        """
+        self.ensure_one()
+        
+        # Check if promotion possible
+        if self.capacity > 0 and self.booking_count_confirmed >= self.capacity:
+            return  # Still at capacity
+        
+        # Find first waitlisted booking (oldest first)
+        waitlisted = self.booking_ids.filtered(
+            lambda b: b.state == 'waitlisted'
+        ).sorted('create_date')
+        
+        if waitlisted:
+            first_in_line = waitlisted[0]
+            first_in_line.write({'state': 'confirmed'})
+            
+            # Could trigger email notification here
+            # first_in_line._send_promotion_notification()
+            
+            return first_in_line
+        
+        return None
+
+    def action_view_bookings(self):
+        """
+        Open bookings list view filtered for this event.
+        
+        USAGE:
+            - Smart button in form view
+            - Shows all bookings for this event
+        
+        RETURNS:
+            Action dictionary to open tree view
+        """
+        self.ensure_one()
+        return {
+            'name': _('Bookings for %s') % self.name,
+            'type': 'ir.actions.act_window',
+            'res_model': 'service.booking',
+            'view_mode': 'list,form',
+            'domain': [('event_id', '=', self.id)],
+            'context': {'default_event_id': self.id},
+        }
+
