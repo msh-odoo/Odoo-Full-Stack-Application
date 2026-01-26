@@ -49,3 +49,6 @@ package.json
 /man/
 /share/
 /src/
+
+# markdown documentation files
+*.md

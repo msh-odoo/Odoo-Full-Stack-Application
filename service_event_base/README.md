@@ -245,21 +245,41 @@ Odoo creates TWO records:
 - Enables cross-module references
 - Prevents duplicate creation on reinstall
 - Powers module upgrades and dependencies
-- Allows `self.env.ref('module.xml_id')` lookups
+- Allows `self.env.ref('module.xml_id')` lookupsfish
 
 ## Development Status
 
-### ✅ Commit 1: Module Foundation + Hooks (CURRENT)
+### ✅ Commit 1: Module Foundation + Hooks (COMPLETE)
 - Module structure
 - Pre-init hook (SQL preparation)
 - Post-init hook (data initialization)
 - Init method (indexes)
 - Category and Tag models
 
+### ✅ Commit 2: Core Models + ORM (CURRENT)
+- service.event model
+- service.booking model
+- Many2one relationships (category_id, partner_id, event_id)
+- Many2many relationships (tag_ids with explicit relation table)
+- One2many inverse relationships (booking_ids)
+- Sequence-based auto-numbering (booking_number)
+- Selection fields with workflow (state: draft→confirmed→done→cancelled)
+- Computed fields (booking_count, amount, display_name)
+- Related fields (currency_id)
+- Active field for archiving
+- All 5 magical fields documented
+- Custom _rec_name demonstration
+- Method overrides (create for sequence generation)
+- Python constraints (_check_booking_date)
+- SQL constraints (positive amounts, positive prices)
+- Workflow action methods (action_confirm, action_done, action_cancel)
+- List and Form views (Odoo 18 compatible)
+- Menu structure
+- Access rights
+
 ### 🔜 Upcoming Commits
-- Commit 2: Core models + ORM concepts
-- Commit 3: Computed fields + constraints
-- Commit 4: Method overrides
+- Commit 3: Advanced computed fields + constraints
+- Commit 4: Method overrides & business logic
 - Commit 5: Security implementation
 - Commit 6: Backend views
 

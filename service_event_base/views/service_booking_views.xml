@@ -1,17 +1,107 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-Service Booking Views - Placeholder
+Service Booking Views
 
 PURPOSE:
     Define user interface views for service.booking model.
 
-THIS FILE WILL BE COMPLETED IN COMMIT 6 (Backend Views).
-Placeholder created for manifest dependency.
+COMMIT 2 SCOPE:
+    Basic tree and form views for testing models.
+    Full-featured views with state buttons will be enhanced in Commit 6.
 -->
 <odoo>
     <data>
         
-        <!-- Service Booking views will be added in Commit 6 -->
+        <!-- Service Booking List View -->
+        <record id="view_service_booking_list" model="ir.ui.view">
+            <field name="name">service.booking.list</field>
+            <field name="model">service.booking</field>
+            <field name="arch" type="xml">
+                <list string="Service Bookings" decoration-info="state=='draft'"
+                      decoration-success="state=='confirmed'" decoration-muted="state=='cancelled'">
+                    <field name="booking_number"/>
+                    <field name="partner_id"/>
+                    <field name="event_id"/>
+                    <field name="booking_date"/>
+                    <field name="amount"/>
+                    <field name="currency_id" optional="hide"/>
+                    <field name="state" widget="badge" decoration-info="state=='draft'"
+                           decoration-success="state in ('confirmed', 'done')"
+                           decoration-danger="state=='cancelled'"/>
+                </list>
+            </field>
+        </record>
+        
+        <!-- Service Booking Form View -->
+        <record id="view_service_booking_form" model="ir.ui.view">
+            <field name="name">service.booking.form</field>
+            <field name="model">service.booking</field>
+            <field name="arch" type="xml">
+                <form string="Service Booking">
+                    <header>
+                        <button name="action_confirm" string="Confirm" type="object"
+                                class="oe_highlight" invisible="state != 'draft'"/>
+                        <button name="action_done" string="Done" type="object"
+                                class="oe_highlight" invisible="state != 'confirmed'"/>
+                        <button name="action_cancel" string="Cancel" type="object"
+                                invisible="state in ('done', 'cancelled')"/>
+                        <button name="action_draft" string="Reset to Draft" type="object"
+                                invisible="state == 'draft'"/>
+                        <field name="state" widget="statusbar" statusbar_visible="draft,confirmed,done"/>
+                    </header>
+                    <sheet>
+                        <div class="oe_title">
+                            <h1>
+                                <field name="booking_number" readonly="1"/>
+                            </h1>
+                        </div>
+                        <group>
+                            <group>
+                                <field name="partner_id"/>
+                                <field name="event_id"/>
+                                <field name="booking_date"/>
+                            </group>
+                            <group>
+                                <field name="amount"/>
+                                <field name="currency_id" options="{'no_create': True}"/>
+                                <field name="company_id" options="{'no_create': True}"/>
+                            </group>
+                        </group>
+                        <group string="Audit Information" groups="base.group_no_one">
+                            <group>
+                                <label for="create_uid" string="Created"/>
+                                <div>
+                                    <field name="create_uid" readonly="1" class="oe_inline"/>
+                                    <span> on </span>
+                                    <field name="create_date" readonly="1" class="oe_inline"/>
+                                </div>
+                            </group>
+                            <group>
+                                <label for="write_uid" string="Last Modified"/>
+                                <div>
+                                    <field name="write_uid" readonly="1" class="oe_inline"/>
+                                    <span> on </span>
+                                    <field name="write_date" readonly="1" class="oe_inline"/>
+                                </div>
+                            </group>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+        
+        <!-- Service Booking Action -->
+        <record id="action_service_booking" model="ir.actions.act_window">
+            <field name="name">Service Bookings</field>
+            <field name="res_model">service.booking</field>
+            <field name="view_mode">list,form</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Create your first booking
+                </p>
+            </field>
+        </record>
         
     </data>
 </odoo>
+
