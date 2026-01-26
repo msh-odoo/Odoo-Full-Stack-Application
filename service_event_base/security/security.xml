@@ -33,14 +33,14 @@ Placeholder created for manifest dependency.
             - Data will be updated on module upgrade
             - Changes in XML will overwrite database
             - Used for critical security definitions
-        
+
         noupdate="1" would mean:
             - Data only created on first install
             - User customizations preserved on upgrade
             - Used for demo data or default records
         -->
-        
+
         <!-- Placeholder: Security groups will be defined in Commit 5 -->
-        
+
     </data>
 </odoo>

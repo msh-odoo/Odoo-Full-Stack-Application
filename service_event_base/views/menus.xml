@@ -22,43 +22,43 @@ COMMIT 2 SCOPE:
 -->
 <odoo>
     <data>
-        
+
         <!-- Root Menu (App) -->
         <menuitem id="menu_service_event_root"
                   name="Service Events"
                   sequence="10"
                   web_icon="service_event_base,static/description/icon.png"/>
-        
+
         <!-- Main Menus -->
         <menuitem id="menu_service_event_main"
                   name="Events"
                   parent="menu_service_event_root"
                   sequence="10"/>
-        
+
         <menuitem id="menu_service_booking_main"
                   name="Bookings"
                   parent="menu_service_event_root"
                   sequence="20"/>
-        
+
         <menuitem id="menu_service_configuration"
                   name="Configuration"
                   parent="menu_service_event_root"
                   sequence="100"/>
-        
+
         <!-- Event Submenus -->
         <menuitem id="menu_service_event_all"
                   name="All Events"
                   parent="menu_service_event_main"
                   action="action_service_event"
                   sequence="10"/>
-        
+
         <!-- Booking Submenus -->
         <menuitem id="menu_service_booking_all"
                   name="All Bookings"
                   parent="menu_service_booking_main"
                   action="action_service_booking"
                   sequence="10"/>
-        
+
     </data>
 </odoo>
 

@@ -20,8 +20,8 @@ THIS FILE WILL BE POPULATED in later commits with sample services and bookings.
 -->
 <odoo>
     <data noupdate="1">
-        
+
         <!-- Demo data will be added in later commits -->
-        
+
     </data>
 </odoo>

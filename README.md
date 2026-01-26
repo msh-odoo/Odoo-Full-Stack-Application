@@ -32,7 +32,7 @@ The goal here is to explore following concepts
 * Aggregate Functions
 * Type of models: BaseModel, Models, TransientModel, AbstractModel
 * Autovaccum(Will be used in case of TransientModel)
-* 
+*
 
 Advance Topics
 * Create Component for Backend Webclient(Field Widget)

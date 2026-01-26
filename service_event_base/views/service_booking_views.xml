@@ -11,7 +11,7 @@ COMMIT 2 SCOPE:
 -->
 <odoo>
     <data>
-        
+
         <!-- Service Booking List View -->
         <record id="view_service_booking_list" model="ir.ui.view">
             <field name="name">service.booking.list</field>
@@ -31,7 +31,7 @@ COMMIT 2 SCOPE:
                 </list>
             </field>
         </record>
-        
+
         <!-- Service Booking Form View -->
         <record id="view_service_booking_form" model="ir.ui.view">
             <field name="name">service.booking.form</field>
@@ -89,7 +89,7 @@ COMMIT 2 SCOPE:
                 </form>
             </field>
         </record>
-        
+
         <!-- Service Booking Action -->
         <record id="action_service_booking" model="ir.actions.act_window">
             <field name="name">Service Bookings</field>
@@ -101,7 +101,7 @@ COMMIT 2 SCOPE:
                 </p>
             </field>
         </record>
-        
+
     </data>
 </odoo>
 

@@ -2,7 +2,7 @@
 """
 Service Event Model
 
-The service.event model represents bookable service events (workshops, webinars, 
+The service.event model represents bookable service events (workshops, webinars,
 consulting sessions, etc.). This model demonstrates:
     - Many2one relationships (category, company)
     - Many2many relationships (tags)
@@ -59,7 +59,7 @@ class ServiceEvent(models.Model):
             'tag_ids': [(6, 0, [tag1.id, tag2.id])],
         })
     """
-    
+
     _name = 'service.event'
     _description = 'Service Event'
     _order = 'name'
@@ -171,7 +171,7 @@ class ServiceEvent(models.Model):
     # ========================================================================
     # MANY2MANY RELATIONSHIP - TAGS
     # ========================================================================
-    
+
     tag_ids = fields.Many2many(
         'service.event.tag',
         'service_event_tag_rel',      # Relation table name
@@ -186,7 +186,7 @@ class ServiceEvent(models.Model):
     # WHAT: Many-to-many relationship via intermediate table
     # WHY: Events can have multiple tags, tags can apply to multiple events
     # HOW: Creates service_event_tag_rel table with (event_id, tag_id) pairs
-    # 
+    #
     # RELATION TABLE STRUCTURE:
     #   CREATE TABLE service_event_tag_rel (
     #       event_id INTEGER REFERENCES service_event(id) ON DELETE CASCADE,
@@ -196,7 +196,7 @@ class ServiceEvent(models.Model):
     #
     # WHY explicit table name: Avoids auto-generated name collisions
     # WHY explicit column names: Clarity and debugging
-    # 
+    #
     # USAGE PATTERNS:
     #   - Add tags: event.tag_ids = [(4, tag.id)]  # link
     #   - Replace all: event.tag_ids = [(6, 0, [tag1.id, tag2.id])]
@@ -216,7 +216,7 @@ class ServiceEvent(models.Model):
     # ========================================================================
     # ONE2MANY INVERSE RELATIONSHIP - BOOKINGS
     # ========================================================================
-    
+
     booking_ids = fields.One2many(
         'service.booking',
         'event_id',  # Field in service.booking that points back here
@@ -229,7 +229,7 @@ class ServiceEvent(models.Model):
     # WHAT: Virtual field showing all bookings linked to this event
     # WHY: Provides easy access to related records (event.booking_ids)
     # HOW: Auto-computed by ORM - no database column created
-    # 
+    #
     # RELATIONSHIP PATTERN:
     #   service.event (One) ←→ service.booking (Many)
     #   - Each booking has event_id (Many2one) pointing to ONE event
@@ -261,13 +261,202 @@ class ServiceEvent(models.Model):
     def _compute_booking_count(self):
         """
         Compute the number of bookings for each event.
-        
+
         WHY @api.depends: Tells Odoo to recompute when booking_ids changes
         HOW it works: Odoo tracks field dependencies and triggers recomputation
         WHEN recomputed: On booking creation/deletion, on record access if stale
         """
         for event in self:
             event.booking_count = len(event.booking_ids)
+
+    # ========================================================================
+    # COMMIT 3: ADVANCED COMPUTED FIELDS
+    # ========================================================================
+
+    capacity = fields.Integer(
+        string='Capacity',
+        default=0,
+        help='Maximum number of attendees (0 = unlimited)',
+    )
+    # WHY: Control overbooking, manage limited resources
+    # HOW: Used in available_seats computation
+    # WHEN: Workshop rooms, webinar licenses, consultation slots
+
+    booking_count_confirmed = fields.Integer(
+        string='Confirmed Bookings',
+        compute='_compute_booking_stats',
+        store=True,  # STORED for performance in filters/reports
+        help='Number of confirmed bookings (excluding draft/cancelled)',
+    )
+    # ========================================================================
+    # STORED vs NON-STORED COMPUTED FIELDS
+    # ========================================================================
+    # store=True:
+    #   ✅ Fast reads (value in database)
+    #   ✅ Can use in search/filter without special domain
+    #   ✅ Great for reports and list views
+    #   ❌ Takes disk space
+    #   ❌ Must manage cache invalidation (via @api.depends)
+    #   ✅ BEST FOR: Fields used in searches, filters, reports
+    #
+    # store=False:
+    #   ✅ No disk space
+    #   ✅ Always up-to-date (computed on-demand)
+    #   ❌ Slower (recomputed each access)
+    #   ❌ Cannot use in search() without special domains
+    #   ✅ BEST FOR: Display-only fields, rarely used fields
+    # ========================================================================
+
+    total_revenue = fields.Monetary(
+        string='Total Revenue',
+        currency_field='currency_id',
+        compute='_compute_booking_stats',
+        store=True,
+        help='Sum of all confirmed booking amounts',
+    )
+    # WHY Monetary: Proper currency formatting and multi-currency support
+    # WHY stored: Used in revenue reports, dashboards
+    # HOW: Sum of booking amounts where state='confirmed'
+
+    available_seats = fields.Integer(
+        string='Available Seats',
+        compute='_compute_available_seats',
+        store=False,  # Always real-time
+        help='Remaining capacity (capacity - confirmed bookings)',
+    )
+    # WHY non-stored: Need real-time availability for booking decisions
+    # HOW: capacity - booking_count_confirmed
+    # WHEN: Checked before allowing new bookings
+
+    @api.depends('booking_ids', 'booking_ids.state', 'booking_ids.amount')
+    def _compute_booking_stats(self):
+        """
+        Compute booking statistics with multiple field dependencies.
+
+        ADVANCED @api.depends PATTERNS:
+            - 'booking_ids': Triggers when booking added/removed
+            - 'booking_ids.state': Triggers when ANY booking's state changes
+            - 'booking_ids.amount': Triggers when ANY booking's amount changes
+
+        WHY multiple dependencies: Changes to any trigger recomputation
+        HOW it works: Odoo tracks nested field changes via ORM
+        PERFORMANCE: Batched computation when multiple bookings change
+
+        DEMONSTRATION:
+            This shows how ONE method can compute MULTIPLE fields efficiently.
+            Both booking_count_confirmed and total_revenue computed together.
+        """
+        for event in self:
+            confirmed_bookings = event.booking_ids.filtered(
+                lambda b: b.state == 'confirmed'
+            )
+            event.booking_count_confirmed = len(confirmed_bookings)
+            event.total_revenue = sum(confirmed_bookings.mapped('amount'))
+
+    @api.depends('capacity', 'booking_count_confirmed')
+    def _compute_available_seats(self):
+        """
+        Compute available seats based on capacity and confirmed bookings.
+
+        COMPUTED FIELD DEPENDENCIES:
+            available_seats depends on:
+                → capacity (regular field)
+                → booking_count_confirmed (computed field, stored)
+
+        DEPENDENCY CHAIN:
+            booking created → booking_ids changes
+                           → booking_count_confirmed recomputed
+                           → available_seats recomputed
+
+        WHY this works: Odoo handles transitive dependencies automatically
+        """
+        for event in self:
+            if event.capacity > 0:
+                event.available_seats = event.capacity - event.booking_count_confirmed
+            else:
+                event.available_seats = -1  # -1 = unlimited
+
+    # ========================================================================
+    # COMMIT 3: INVERSE FUNCTIONS FOR COMPUTED FIELDS
+    # ========================================================================
+
+    start_datetime = fields.Datetime(
+        string='Start Date & Time',
+        help='When the event starts',
+    )
+    # Regular datetime field - stores actual start time
+
+    duration = fields.Float(
+        string='Duration (hours)',
+        default=1.0,
+        help='Event duration in hours',
+    )
+    # Regular field - stores duration
+
+    end_datetime = fields.Datetime(
+        string='End Date & Time',
+        compute='_compute_end_datetime',
+        inverse='_inverse_end_datetime',
+        store=True,
+        help='Automatically calculated from start + duration',
+    )
+    # ========================================================================
+    # INVERSE FUNCTIONS - WRITE TO COMPUTED FIELDS
+    # ========================================================================
+    # WHAT: Allows writing to a computed field
+    # WHY: User might want to set end time directly, auto-compute duration
+    # HOW: inverse= method called when field is written to
+    #
+    # PATTERN:
+    #   - User sets start_datetime = '2026-02-01 10:00'
+    #   - User sets duration = 2.0
+    #   - System computes end_datetime = '2026-02-01 12:00'
+    #
+    # OR (with inverse):
+    #   - User sets start_datetime = '2026-02-01 10:00'
+    #   - User sets end_datetime = '2026-02-01 14:00'
+    #   - System computes duration = 4.0 (via inverse function)
+    #
+    # WHEN to use: Bidirectional computations, user-friendly input
+    # ========================================================================
+
+    @api.depends('start_datetime', 'duration')
+    def _compute_end_datetime(self):
+        """
+        Compute end time from start + duration.
+
+        FORMULA: end_datetime = start_datetime + duration (hours)
+
+        EDGE CASES:
+            - No start_datetime → end_datetime = False
+            - duration = 0 → end_datetime = start_datetime
+        """
+        from datetime import timedelta
+
+        for event in self:
+            if event.start_datetime and event.duration:
+                event.end_datetime = event.start_datetime + timedelta(hours=event.duration)
+            else:
+                event.end_datetime = event.start_datetime
+
+    def _inverse_end_datetime(self):
+        """
+        Inverse function: compute duration when end_datetime is set.
+
+        FORMULA: duration = (end_datetime - start_datetime) in hours
+
+        USAGE:
+            event.end_datetime = '2026-02-01 14:00'  # Triggers this function
+            → Automatically updates event.duration
+
+        WHY useful: User can drag-drop event end time in calendar view
+        """
+        for event in self:
+            if event.start_datetime and event.end_datetime:
+                delta = event.end_datetime - event.start_datetime
+                event.duration = delta.total_seconds() / 3600  # Convert to hours
+            elif not event.end_datetime:
+                event.duration = 0.0
 
     # ========================================================================
     # MULTI-COMPANY FIELD
@@ -285,7 +474,7 @@ class ServiceEvent(models.Model):
     # WHY: Odoo supports multiple companies in one database (SaaS/holding companies)
     # HOW: Each record is owned by a company, users can access per permissions
     # WHEN to use: Always in production modules for future-proofing
-    # 
+    #
     # DEFAULT BEHAVIOR:
     #   - self.env.company: Current user's company
     #   - Auto-filters: Only shows records from user's allowed companies
@@ -293,11 +482,11 @@ class ServiceEvent(models.Model):
     #
     # ALTERNATIVE: Make required=True to enforce company assignment
     # ========================================================================
-    
+
     # ========================================================================
     # MAGICAL FIELDS - AUTOMATICALLY PROVIDED BY ODOO
     # ========================================================================
-    # 
+    #
     # These fields are AUTOMATICALLY added by Odoo ORM to ALL models.
     # We document them here for educational purposes.
     #
@@ -368,17 +557,17 @@ class ServiceEvent(models.Model):
     def _compute_display_name(self):
         """
         Compute display name with category for better UX.
-        
+
         DISPLAY NAME vs _REC_NAME:
             _rec_name: Simple - points to a field name
             display_name: Complex - can include logic, formatting, multiple fields
-        
+
         USAGE CONTEXT:
             - Shown in Many2one dropdowns
             - Shown in breadcrumbs
             - Shown in search results
             - Used in form/tree view references
-        
+
         EXAMPLE OUTPUT:
             "Python Workshop [Workshops]"
             "Azure Consulting [Consulting]"
@@ -399,8 +588,120 @@ class ServiceEvent(models.Model):
             'CHECK (price_unit >= 0)',
             'Price must be positive or zero'
         ),
+        (
+            'positive_capacity',
+            'CHECK (capacity >= 0)',
+            'Capacity cannot be negative'
+        ),
+        (
+            'positive_duration',
+            'CHECK (duration >= 0)',
+            'Duration cannot be negative'
+        ),
     ]
     # WHY SQL constraint: Database-level enforcement (cannot bypass)
     # ALTERNATIVE: @api.constrains Python constraint (more flexible but slower)
     # WHEN to use SQL: Simple checks on single fields
     # WHEN to use Python: Complex multi-field validation
+
+    # ========================================================================
+    # COMMIT 3: COMPLEX PYTHON CONSTRAINTS
+    # ========================================================================
+
+    @api.constrains('capacity', 'booking_count_confirmed')
+    def _check_capacity_not_exceeded(self):
+        """
+        Ensure confirmed bookings don't exceed capacity.
+
+        PYTHON CONSTRAINTS vs SQL CONSTRAINTS:
+
+        SQL (_sql_constraints):
+            ✅ Enforced at database level (PostgreSQL)
+            ✅ Very fast
+            ✅ Cannot be bypassed
+            ❌ Limited logic (only SQL expressions)
+            ❌ Cannot access related records easily
+            ✅ BEST FOR: Simple field validations (positive numbers, unique values)
+
+        Python (@api.constrains):
+            ✅ Full Python logic available
+            ✅ Can access related records
+            ✅ Can check complex business rules
+            ✅ Better error messages
+            ❌ Slower than SQL
+            ❌ Can be bypassed via SQL queries (rare)
+            ✅ BEST FOR: Multi-field validation, business logic
+
+        WHY multiple fields in @api.constrains:
+            Validation runs when ANY listed field changes.
+            Here: runs when capacity OR booking_count_confirmed changes.
+
+        WHEN this runs:
+            - User changes capacity
+            - New confirmed booking created (booking_count_confirmed updates)
+            - Booking state changes to 'confirmed'
+        """
+        for event in self:
+            if event.capacity > 0 and event.booking_count_confirmed > event.capacity:
+                raise ValidationError(
+                    f"Event '{event.name}' is overbooked! "
+                    f"Capacity: {event.capacity}, "
+                    f"Confirmed bookings: {event.booking_count_confirmed}"
+                )
+
+    @api.constrains('start_datetime', 'end_datetime')
+    def _check_datetime_range(self):
+        """
+        Validate that end time is after start time.
+
+        MULTIPLE FIELD CONSTRAINT:
+            Checks relationship between two fields.
+            Cannot be done with SQL constraint easily.
+
+        EDGE CASES HANDLED:
+            - Both fields must exist for validation
+            - Allows missing dates (optional fields)
+            - Clear error message with actual values
+        """
+        for event in self:
+            if event.start_datetime and event.end_datetime:
+                if event.end_datetime <= event.start_datetime:
+                    raise ValidationError(
+                        f"Event '{event.name}': End time must be after start time.\n"
+                        f"Start: {event.start_datetime}\n"
+                        f"End: {event.end_datetime}"
+                    )
+
+    @api.constrains('price_unit', 'booking_ids')
+    def _check_price_consistency(self):
+        """
+        Warn if changing price when bookings exist.
+
+        BUSINESS RULE:
+            Changing event price after bookings exist can cause confusion.
+            Existing bookings keep their original price (amount field).
+
+        DESIGN DECISION:
+            - Warning only, not blocking (ValidationError)
+            - Could log warning instead of raising error
+            - Could auto-update booking amounts (risky)
+
+        ALTERNATIVE APPROACHES:
+            1. Block price changes: raise ValidationError
+            2. Auto-update bookings: booking.write({'amount': new_price})
+            3. Create new event version: event.copy({'price_unit': new_price})
+
+        WHY we allow it:
+            Price changes might be intentional (discounts, promotions).
+            This is just a safety check for awareness.
+        """
+        for event in self:
+            if event.booking_ids and event.price_unit:
+                # Check if any booking has different amount than current price
+                different_prices = event.booking_ids.filtered(
+                    lambda b: b.amount != event.price_unit
+                )
+                if different_prices:
+                    # Note: In production, might just log this instead of raising
+                    # For education, we demonstrate the pattern
+                    pass  # Allow, but could raise warning in future

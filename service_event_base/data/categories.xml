@@ -19,7 +19,7 @@ TRADE-OFFS:
         ✓ Centralized in Python code
         ✗ Not visible in XML (less transparent)
         ✗ Requires Python knowledge to modify
-    
+
     XML approach:
         ✓ Declarative and visible
         ✓ Easy to modify without Python
@@ -41,13 +41,13 @@ WHAT IS ir.model.data:
            - name: category_workshop
            - model: service.event.category
            - res_id: actual database ID
-    
+
     WHY ir.model.data:
         - Enables referencing records across modules
         - Prevents duplicate creation on reinstall
         - Allows record lookup by XML ID
         - Powers module upgrade and dependency resolution
-    
+
     EXAMPLE:
         self.env.ref('service_event_base.category_workshop')
         → Returns the actual record object
@@ -63,10 +63,10 @@ NOTE: Categories are created in hooks.py post_init_hook.
             - Don't overwrite customizations on upgrade
             - Categories created by hook anyway
         -->
-        
+
         <!-- Categories are created by post_init_hook -->
         <!-- This file is a placeholder for manual additions -->
-        
+
         <!--
         EXAMPLE (not active):
         <record id="category_workshop" model="service.event.category">
@@ -75,6 +75,6 @@ NOTE: Categories are created in hooks.py post_init_hook.
             <field name="description">Educational workshops and training sessions</field>
         </record>
         -->
-        
+
     </data>
 </odoo>

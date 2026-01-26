@@ -48,7 +48,7 @@ THIS FILE WILL BE USED IN COMMIT 2 (create() override).
             - Preserves current number on upgrade
             - Only created on first install
         -->
-        
+
         <!-- Service Booking Sequence -->
         <record id="sequence_service_booking" model="ir.sequence">
             <field name="name">Service Booking Sequence</field>
@@ -60,7 +60,7 @@ THIS FILE WILL BE USED IN COMMIT 2 (create() override).
                 %(month)s → Current month (01-12)
                 %(day)s → Current day (01-31)
                 Result: "BOOK/2026/0001", "BOOK/2026/0002", ...
-            
+
             WHY INCLUDE YEAR:
                 - Sequences can be reset annually
                 - Easier to identify old vs new bookings
@@ -71,7 +71,7 @@ THIS FILE WILL BE USED IN COMMIT 2 (create() override).
             PADDING:
                 4 → 0001, 0002, ..., 9999
                 5 → 00001, 00002, ..., 99999
-            
+
             WHY 4:
                 - Handles up to 9,999 bookings per year
                 - Good balance of readability and capacity
@@ -84,18 +84,18 @@ THIS FILE WILL BE USED IN COMMIT 2 (create() override).
             IMPLEMENTATION OPTIONS:
                 'standard': Fast, may have gaps if transaction rolls back
                 'no_gap': Slower, guaranteed sequential (use for legal docs)
-            
+
             WHY STANDARD:
                 - Bookings are not legal documents
                 - Performance matters for high-volume booking
                 - Gaps are acceptable in booking references
-            
+
             WHEN TO USE no_gap:
                 - Invoices (legal requirement in some countries)
                 - Legal contracts
                 - Government-mandated numbering
             -->
         </record>
-        
+
     </data>
 </odoo>

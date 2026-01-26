@@ -142,7 +142,7 @@ class ServiceBooking(models.Model):
     def _compute_name(self):
         """
         Compute booking name from number and event.
-        
+
         WHY store=True here: Frequently displayed/searched
         PATTERN: "BOOK/2026/0001 - Python Workshop"
         """
@@ -170,7 +170,7 @@ class ServiceBooking(models.Model):
     # WHAT: Links booking to a customer (res.partner)
     # WHY required=True: Every booking must have a customer
     # WHY ondelete='restrict': Cannot delete customer with active bookings
-    # 
+    #
     # res.partner EXPLAINED:
     #   - Central contact model in Odoo
     #   - Represents customers, vendors, companies, individuals
@@ -280,11 +280,22 @@ class ServiceBooking(models.Model):
     #   - Server in UTC sees today = Jan 23 at 2am
     #   - context_today ensures consistent UX
     #
+    # COMMIT 3: DEFAULT VALUE FUNCTIONS
+    # DEFAULT PATTERNS DEMONSTRATED:
+    #   1. Static default: default='draft'
+    #   2. Function reference: default=fields.Date.context_today
+    #   3. Lambda: default=lambda self: self.env.company
+    #   4. Method: default=_default_company_id
+    #
+    # WHEN each executes:
+    #   - Function/lambda: Called EVERY TIME a new record is created
+    #   - Static: Set ONCE at field definition
+    #
     # MAGICAL FIELDS USAGE:
     #   - create_date: Exact timestamp (UTC) when record created
     #   - booking_date: Business date chosen by user (timezone-aware)
     # ========================================================================
-    
+
     # ========================================================================
     # FINANCIAL FIELDS
     # ========================================================================
@@ -372,7 +383,7 @@ class ServiceBooking(models.Model):
         help='Company owning this booking',
     )
     # Multi-company support (same pattern as service.event)
-    
+
     # ========================================================================
     # MAGICAL FIELDS - AUTOMATIC AUDIT TRAIL
     # ========================================================================
@@ -466,53 +477,53 @@ class ServiceBooking(models.Model):
     def action_confirm(self):
         """
         Confirm the booking.
-        
+
         WHY action_ PREFIX:
             - Odoo convention for button actions
             - Clearly indicates user-triggered workflow methods
-        
+
         USAGE:
             - Called from button in form view
             - Can be called programmatically: booking.action_confirm()
         """
         self.ensure_one()  # Ensure single record (not recordset)
         self.write({'state': 'confirmed'})
-    
+
     def action_done(self):
         """Mark booking as done (event completed)."""
         self.ensure_one()
         self.write({'state': 'done'})
-    
+
     def action_cancel(self):
         """Cancel the booking."""
         self.ensure_one()
         self.write({'state': 'cancelled'})
-    
+
     def action_draft(self):
         """Reset to draft (for corrections)."""
         self.ensure_one()
         self.write({'state': 'draft'})
-    
+
     # ========================================================================
     # CONSTRAINTS
     # ========================================================================
-    
+
     @api.constrains('booking_date')
     def _check_booking_date(self):
         """
         Validate booking date is not in the past.
-        
+
         @api.constrains EXPLAINED:
             - Python-level constraint (runs in application layer)
             - More flexible than SQL constraints
             - Can access related records, call methods, etc.
             - Triggered on create/write of specified fields
-        
+
         USAGE:
             - Validates business rules
             - Raises ValidationError if check fails
             - Error message shown to user
-        
+
         WHEN TO USE:
             - SQL constraints: Simple, single-field checks
             - Python constraints: Complex, multi-field/record validation
@@ -523,7 +534,158 @@ class ServiceBooking(models.Model):
                     'Booking date cannot be in the past. '
                     'Please select today or a future date.'
                 ))
-    
+
+    _sql_constraints = [
+        (
+            'positive_amount',
+            'CHECK (amount >= 0)',
+            'Booking amount must be positive or zero'
+        ),
+    ]
+
+    # ========================================================================
+    # COMMIT 3: ONCHANGE METHODS
+    # ========================================================================
+
+    @api.onchange('event_id')
+    def _onchange_event_id(self):
+        """
+        Auto-populate fields when event is selected.
+
+        @api.onchange EXPLAINED:
+        ========================
+        WHAT:
+            Decorator that triggers a method when a field changes in the UI.
+
+        WHY:
+            - Improve user experience (auto-fill forms)
+            - Show warnings/suggestions before saving
+            - Update dependent fields dynamically
+
+        HOW IT WORKS:
+            1. User changes event_id in form view
+            2. Odoo detects change (before save)
+            3. Calls this method with current form values
+            4. Method updates self with new values
+            5. UI refreshes to show changes
+            6. User can still edit before saving
+
+        CRITICAL: Changes are NOT saved to database yet!
+            - onchange updates form state only
+            - User must click Save to persist
+
+        ONCHANGE vs COMPUTE:
+        ====================
+        @api.onchange:
+            ✅ Runs in UI before save
+            ✅ User can override
+            ✅ Can show warnings/messages
+            ❌ Not triggered programmatically
+            ✅ BEST FOR: User assistance, form auto-fill
+
+        @api.compute:
+            ✅ Runs on save and programmatically
+            ❌ Readonly by default
+            ✅ Can be stored
+            ✅ Always recalculated
+            ✅ BEST FOR: Calculated values, business logic
+
+        RETURN VALUE:
+        =============
+        Can return dictionary with:
+            - 'warning': Show popup message
+            - 'domain': Filter related field options
+
+        EXAMPLE RETURN:
+            return {
+                'warning': {
+                    'title': 'Warning',
+                    'message': 'Event is almost full!'
+                },
+                'domain': {
+                    'partner_id': [('customer_rank', '>', 0)]
+                }
+            }
+        """
+        if self.event_id:
+            # Auto-populate amount from event price
+            # Note: _compute_amount also does this, but onchange is immediate
+            self.amount = self.event_id.price_unit
+
+            # Check availability and warn if low
+            if hasattr(self.event_id, 'available_seats'):
+                if self.event_id.available_seats == 0:
+                    return {
+                        'warning': {
+                            'title': _('Event Full'),
+                            'message': _(
+                                f"Event '{self.event_id.name}' is at full capacity "
+                                f"({self.event_id.capacity} seats). "
+                                f"This booking may be waitlisted."
+                            )
+                        }
+                    }
+                elif 0 < self.event_id.available_seats <= 5:
+                    return {
+                        'warning': {
+                            'title': _('Low Availability'),
+                            'message': _(
+                                f"Only {self.event_id.available_seats} seats remaining "
+                                f"for '{self.event_id.name}'."
+                            )
+                        }
+                    }
+
+    @api.onchange('partner_id')
+    def _onchange_partner_id(self):
+        """
+        Update form when customer changes.
+
+        USAGE PATTERNS:
+            - Could filter events based on customer preferences
+            - Could apply customer-specific discounts
+            - Could show customer's booking history
+
+        DEMONSTRATION:
+            This shows how to modify other fields based on partner selection.
+        """
+        if self.partner_id:
+            # Example: Could apply customer-specific discount
+            # if self.partner_id.is_vip:
+            #     self.amount = self.amount * 0.9  # 10% VIP discount
+
+            # Could set domain to filter events by customer preferences
+            # customer_category = self.partner_id.preferred_category_id
+            # return {'domain': {'event_id': [('category_id', '=', customer_category.id)]}}
+            pass
+
+    @api.onchange('booking_date')
+    def _onchange_booking_date(self):
+        """
+        Validate and warn about booking date.
+
+        DIFFERENCE FROM CONSTRAINT:
+            @api.constrains: Blocks save with error
+            @api.onchange: Shows warning, allows save
+
+        USE CASE:
+            Constraint: Hard rule (cannot save past dates)
+            Onchange: Soft warning (can save weekend dates but warn)
+        """
+        if self.booking_date:
+            # Warn if booking on weekend (example business rule)
+            weekday = self.booking_date.weekday()  # Monday=0, Sunday=6
+            if weekday in (5, 6):  # Saturday or Sunday
+                return {
+                    'warning': {
+                        'title': _('Weekend Booking'),
+                        'message': _(
+                            'You are creating a booking on a weekend. '
+                            'Please note that our office is closed on weekends.'
+                        )
+                    }
+                }
+
     _sql_constraints = [
         (
             'positive_amount',

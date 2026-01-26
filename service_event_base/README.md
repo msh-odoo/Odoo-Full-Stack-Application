@@ -4,6 +4,53 @@
 **Category:** Services/Events
 **License:** LGPL-3
 
+## Development Status
+
+### Current Progress (17-Commit Roadmap)
+
+**Status Legend:** ✅ Complete | 🔄 Current | ⏳ Pending
+
+- ✅ **Commit 1** (COMPLETE): Module Foundation + Hooks
+- ✅ **Commit 2** (COMPLETE): Core Models + ORM  
+- 🔄 **Commit 3** (CURRENT): Advanced Computed Fields + Constraints
+- ⏳ **Commit 4**: Business Logic Layer
+- ⏳ **Commit 5**: Security + Access Control
+- ⏳ **Commit 6**: Views + UI Enhancement
+- ⏳ **Commit 7**: Reports + Email Templates
+- ⏳ **Commit 8**: Wizards + Workflows
+- ⏳ **Commit 9-17**: Advanced features
+
+### Commit 3 Features (Advanced Computed Fields + Constraints)
+
+**Service Event Model Enhancements:**
+- ✅ Capacity management (capacity field)
+- ✅ Advanced computed fields with multiple dependencies
+  - booking_count_confirmed (stored)
+  - total_revenue (stored, Monetary)
+  - available_seats (non-stored, real-time)
+- ✅ Datetime scheduling fields
+  - start_datetime, end_datetime, duration
+  - Inverse function on end_datetime (bidirectional computation)
+- ✅ Complex Python constraints
+  - Capacity validation (prevent overbooking)
+  - Datetime range validation
+  - Price consistency checks
+- ✅ SQL constraints for data integrity
+
+**Service Booking Model Enhancements:**
+- ✅ Onchange methods for UX improvement
+  - Auto-populate amount from event
+  - Show availability warnings
+  - Weekend booking warnings
+- ✅ Default value functions demonstrated
+  - context_today for dates
+  - Lambda for company_id
+
+**Views Updated:**
+- ✅ Event list view: capacity, booking stats, revenue
+- ✅ Event form view: capacity tracking group, schedule group
+- ✅ Booking views: onchange methods work automatically
+
 ## Overview
 
 Core business logic module for the Service Event & Booking System. This module provides foundational models, business logic, security, and data management for service event operations.

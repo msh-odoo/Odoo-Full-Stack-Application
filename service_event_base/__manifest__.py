@@ -63,51 +63,51 @@
         * base: Core Odoo framework
         * mail: Activity tracking and messaging (used for booking notifications)
     """,
-    
+
     'author': 'Odoo Full-Stack Development Team',
     'website': 'https://www.example.com',
     'license': 'LGPL-3',
-    
+
     # Dependencies - ONLY base and mail, NO website/portal
     'depends': [
         'base',
         'mail',  # For activity tracking, chatter, notifications
     ],
-    
+
     # Always load these data files
     'data': [
         # Security must load first (groups before access rights)
         'security/security.xml',
         'security/ir.model.access.csv',
-        
+
         # Data files
         'data/sequences.xml',
         'data/categories.xml',
-        
+
         # Views
         'views/service_event_views.xml',
         'views/service_booking_views.xml',
         'views/menus.xml',
     ],
-    
+
     # Demo data (only loaded with demo mode)
     'demo': [
         'demo/demo_data.xml',
     ],
-    
+
     # Lifecycle hooks - executed during installation
     'pre_init_hook': 'pre_init_hook',
     'post_init_hook': 'post_init_hook',
-    
+
     # Module behavior flags
     'installable': True,
     'application': True,  # This is a standalone application
-    
+
     # External dependencies (Python packages)
     'external_dependencies': {
         'python': [],  # No additional Python packages required
     },
-    
+
     # Assets (JS/CSS) - base module has no web assets
     'assets': {},
 }
