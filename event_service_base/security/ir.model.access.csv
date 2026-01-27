@@ -1,0 +1,5 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_event_service_registration_user,event.service.registration user,model_event_service_registration,base.group_user,1,1,1,1
+access_event_service_user,event.service user,model_event_service,base.group_user,1,1,1,1
+access_event_service_category_user,event.service.category user,model_event_service_category,base.group_user,1,1,1,0
+access_event_service_tag_user,event.service.tag user,model_event_service_tag,base.group_user,1,1,1,0
