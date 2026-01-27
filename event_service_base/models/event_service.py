@@ -1,4 +1,4 @@
-from community.odoo import fields, models
+from odoo import fields, models
 
 
 class EventService(models.Model):
@@ -6,7 +6,7 @@ class EventService(models.Model):
     _description = "Event Service"
 
     name = fields.Char(string="Name", required=True)
-    description = fields.HTML(string="Description")
+    description = fields.Html(string="Description")
     price = fields.Float(string="Price", default=0.0)
     active = fields.Boolean(string="Active", default=True)
     category_id = fields.Many2one("event.service.category", string="Category")

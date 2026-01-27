@@ -1,4 +1,5 @@
-from community.odoo import api, fields, models
+from odoo import api, fields, models
+from odoo.exceptions import ValidationError
 
 
 class EventServiceRegistration(models.Model):
@@ -14,9 +15,13 @@ class EventServiceRegistration(models.Model):
         ('confirmed', 'Confirmed'),
         ('cancelled', 'Cancelled')
     ], default = 'draft')
-    partner_id = fields.Many2one("res.partner", string="Partner", required=True, ondelete="cascade")
+    partner_id = fields.Many2one("res.partner", string="Partner", required=True, ondelete="restrict")
     service_id = fields.Many2one("event.service", string="Service", required=True, ondelete="restrict")
     company_id = fields.Many2one("res.company", default=lambda self: self.env.company, ondelete="restrict")
+
+    _unique_booking = models.Constraint(
+        "unique(partner_id, service_id)", "You cannot register the same service twice."
+    )
 
     @api.depends('service_id.price', 'quantity')
     def _compute_amount(self):
@@ -28,3 +33,10 @@ class EventServiceRegistration(models.Model):
         for vals in vals_list:
             vals["name"] = self.env["ir.sequence"].next_by_code("event.service.registration")
         return super().create(vals_list)
+
+    @api.constrains('booking_date')
+    def _check_booking_date(self):
+        for record in self:
+            if record.booking_date < fields.Datetime.now():
+                raise ValidationError("The booking date cannot be in past !")
+
