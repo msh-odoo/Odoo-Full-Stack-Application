@@ -27,6 +27,7 @@ COMMIT 2 SCOPE:
         <menuitem id="menu_service_event_root"
                   name="Service Events"
                   sequence="10"
+                  groups="service_event_base.group_service_event_user"
                   web_icon="service_event_base,static/description/icon.png"/>
 
         <!-- Main Menus -->
@@ -43,6 +44,7 @@ COMMIT 2 SCOPE:
         <menuitem id="menu_service_configuration"
                   name="Configuration"
                   parent="menu_service_event_root"
+                  groups="service_event_base.group_service_event_manager"
                   sequence="100"/>
 
         <!-- Event Submenus -->

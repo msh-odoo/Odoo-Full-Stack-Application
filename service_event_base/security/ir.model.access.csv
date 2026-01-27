@@ -1,6 +1,12 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_service_event_category_all,access_service_event_category_all,model_service_event_category,,1,0,0,0
-access_service_event_tag_all,access_service_event_tag_all,model_service_event_tag,,1,0,0,0
-access_service_event_all,access_service_event_all,model_service_event,,1,1,1,1
-access_service_booking_all,access_service_booking_all,model_service_booking,,1,1,1,1
+access_service_event_category_user,Service Event Category User,model_service_event_category,group_service_event_user,1,0,0,0
+access_service_event_category_manager,Service Event Category Manager,model_service_event_category,group_service_event_manager,1,1,1,1
+access_service_event_tag_user,Service Event Tag User,model_service_event_tag,group_service_event_user,1,0,0,0
+access_service_event_tag_manager,Service Event Tag Manager,model_service_event_tag,group_service_event_manager,1,1,1,1
+access_service_event_user,Service Event User,model_service_event,group_service_event_user,1,0,0,0
+access_service_event_manager,Service Event Manager,model_service_event,group_service_event_manager,1,1,1,1
+access_service_booking_user,Service Booking User,model_service_booking,group_service_event_user,1,1,1,0
+access_service_booking_manager,Service Booking Manager,model_service_booking,group_service_event_manager,1,1,1,1
+
+
 

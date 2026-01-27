@@ -46,13 +46,16 @@ COMMIT 2 SCOPE:
                         <button name="action_confirm" string="Confirm" type="object"
                                 class="oe_highlight" invisible="state not in ('draft', 'waitlisted')"/>
                         <button name="action_promote_from_waitlist" string="Promote from Waitlist" type="object"
-                                class="oe_highlight" invisible="state != 'waitlisted'"/>
+                                class="oe_highlight" invisible="state != 'waitlisted'"
+                                groups="service_event_base.group_service_event_manager"/>
                         <button name="action_done" string="Done" type="object"
-                                class="oe_highlight" invisible="state != 'confirmed'"/>
+                                class="oe_highlight" invisible="state != 'confirmed'"
+                                groups="service_event_base.group_service_event_manager"/>
                         <button name="action_cancel" string="Cancel" type="object"
                                 invisible="state in ('done', 'cancelled')"/>
                         <button name="action_draft" string="Reset to Draft" type="object"
-                                invisible="state == 'draft'"/>
+                                invisible="state == 'draft'"
+                                groups="service_event_base.group_service_event_manager"/>
                         <field name="state" widget="statusbar" statusbar_visible="draft,confirmed,done"/>
                     </header>
                     <sheet>

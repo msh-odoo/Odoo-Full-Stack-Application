@@ -77,7 +77,7 @@
     # Always load these data files
     'data': [
         # Security must load first (groups before access rights)
-        'security/security.xml',
+        'security/service_event_security.xml',
         'security/ir.model.access.csv',
 
         # Data files

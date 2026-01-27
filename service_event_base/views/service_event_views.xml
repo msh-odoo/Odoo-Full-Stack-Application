@@ -62,16 +62,21 @@ COMMIT 2 SCOPE:
                 <form string="Service Event">
                     <header>
                         <button name="action_publish" string="Publish" type="object"
-                                class="oe_highlight" invisible="state != 'draft'"/>
+                                class="oe_highlight" invisible="state != 'draft'"
+                                groups="service_event_base.group_service_event_manager"/>
                         <button name="action_close_registration" string="Close Registration" type="object"
-                                invisible="state != 'published'"/>
+                                invisible="state != 'published'"
+                                groups="service_event_base.group_service_event_manager"/>
                         <button name="action_mark_completed" string="Mark Completed" type="object"
-                                invisible="state not in ('published', 'registration_closed')"/>
+                                invisible="state not in ('published', 'registration_closed')"
+                                groups="service_event_base.group_service_event_manager"/>
                         <button name="action_cancel_event" string="Cancel Event" type="object"
                                 invisible="state in ('completed', 'cancelled')"
-                                confirm="This will cancel all bookings. Are you sure?"/>
+                                confirm="This will cancel all bookings. Are you sure?"
+                                groups="service_event_base.group_service_event_manager"/>
                         <button name="action_reset_to_draft" string="Reset to Draft" type="object"
-                                invisible="state not in ('cancelled', 'completed')"/>
+                                invisible="state not in ('cancelled', 'completed')"
+                                groups="service_event_base.group_service_event_manager"/>
                         <field name="state" widget="statusbar" 
                                statusbar_visible="draft,published,registration_closed,completed"/>
                     </header>
@@ -92,7 +97,7 @@ COMMIT 2 SCOPE:
                                 <field name="company_id" options="{'no_create': True}"/>
                             </group>
                         </group>
-                        <group string="Pricing" name="pricing_group">
+                        <group string="Pricing" name="pricing_group" groups="service_event_base.group_service_event_manager">
                             <group>
                                 <field name="price_unit"/>
                                 <field name="early_bird_price"/>
@@ -124,7 +129,7 @@ COMMIT 2 SCOPE:
                                 <field name="duration" help="Event duration in hours"/>
                             </group>
                         </group>
-                        <group string="Business Metrics" name="metrics_group">
+                        <group string="Business Metrics" name="metrics_group" groups="service_event_base.group_service_event_manager">
                             <group>
                                 <field name="fill_rate" widget="percentage"/>
                                 <field name="revenue_per_seat" widget="monetary"/>
