@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+
+<odoo>
+    <menuitem id="invincible_root_menu" name="Invincible" web_icon="Invincible,static/description/image.png"/>
+
+    <menuitem id="invincible_level1" name="Events" action="event_action" parent="invincible_root_menu"/>
+</odoo>
