@@ -10,22 +10,12 @@ class EventService(models.Model):
     price = fields.Monetary(string='Price', currency_field='currency_id')
     active = fields.Boolean(string='Active', default=True)
     # Many2one relationship to event type from odoo standard event module
-    event_type_id = fields.Many2one(
-        'event.type', string='Event Type',
-        ondelete='set null', index=True
-    )
-    tag_ids = fields.Many2many(
-        'event.tag', string='Tags', compute='_compute_tag_ids'
-    )
-    company_id = fields.Many2one('res.company', required=True,
-                                 default=lambda self: self.env.company.root_id)
+    event_type_id = fields.Many2one('event.type', string='Event Type', ondelete='set null', index=True)
+    tag_ids = fields.Many2many('event.tag', string='Tags', compute='_compute_tag_ids')
+    company_id = fields.Many2one('res.company', required=True, default=lambda self: self.env.company)
     booking_ids = fields.One2many('event.registrations', 'service_id', string='Bookings')
     # You are never going to use multi-currency in a single company or change it either.
-    currency_id = fields.Many2one(
-        'res.currency', string='Currency',
-        default=lambda self: self.env.company.currency_id,
-        readonly=True
-    )
+    currency_id = fields.Many2one('res.currency', string='Currency', default=lambda self: self.company_id.currency_id, readonly=True)
 
     @api.depends('event_type_id')
     def _compute_tag_ids(self):
