@@ -13,12 +13,56 @@
 - ✅ **Commit 1** (COMPLETE): Module Foundation + Hooks
 - ✅ **Commit 2** (COMPLETE): Core Models + ORM  
 - ✅ **Commit 3** (COMPLETE): Advanced Computed Fields + Constraints
-- 🔄 **Commit 4** (CURRENT): Business Logic Layer
-- ⏳ **Commit 5**: Security + Access Control
-- ⏳ **Commit 6**: Views + UI Enhancement
+- ✅ **Commit 4** (COMPLETE): Business Logic Layer
+- ✅ **Commit 5** (COMPLETE): Security + Access Control
+- 🔄 **Commit 6** (CURRENT): Views + UI Enhancement
 - ⏳ **Commit 7**: Reports + Email Templates
 - ⏳ **Commit 8**: Wizards + Workflows
 - ⏳ **Commit 9-17**: Advanced features
+
+### Commit 5 Features (Security + Access Control)
+
+**Odoo 19 Privilege-Based Security:**
+- ✅ Module category and privilege definition
+  - ir.module.category: "Service Events"
+  - res.groups.privilege: Links groups to category
+  - New architecture for better UI organization
+
+**Security Groups:**
+- ✅ Service User (basic access)
+  - View published events
+  - Create and manage own bookings
+  - Read categories and tags
+- ✅ Service Manager (full access)
+  - All User permissions +
+  - Manage all events (any state)
+  - Manage all bookings
+  - Access pricing and metrics
+  - Configure system
+
+**Access Control Layers:**
+- ✅ Model-level access rights (ir.model.access.csv)
+  - 8 access rules for 4 models
+  - User: Read-only on events/categories/tags, CRU on bookings
+  - Manager: Full CRUD on all models
+- ✅ Record-level security (8 record rules)
+  - Users see only published events
+  - Users see only own bookings
+  - Managers see all records
+- ✅ Field-level security
+  - Pricing fields hidden from users
+  - Business metrics hidden from users
+  - Workflow buttons restricted to managers
+- ✅ Menu security
+  - Root menu: Service User minimum
+  - Configuration menu: Manager only
+
+**Files Modified:**
+- security/service_event_security.xml
+- security/ir.model.access.csv (9 entries)
+- views/service_event_views.xml (field restrictions)
+- views/service_booking_views.xml (button restrictions)
+- views/menus.xml (menu visibility)
 
 ### Commit 4 Features (Business Logic Layer)
 
@@ -308,6 +352,30 @@ Odoo creates TWO records:
 - Allows `self.env.ref('module.xml_id')` lookupsfish
 
 ## Development Status
+
+### ✅ Commit 5: Security + Access Control (COMPLETE)
+- Odoo 19 privilege-based security architecture
+- Module category and privilege definition
+- 2 security groups (User, Manager) with hierarchy
+- 8 model-level access rights (ir.model.access.csv)
+- 8 record rules for row-level security
+- Field-level security (pricing, metrics hidden from users)
+- Menu security restrictions
+
+### ✅ Commit 4: Business Logic Layer (COMPLETE)
+- Pricing logic (early bird, discounts, final price)
+- Event lifecycle management (draft→published→closed→completed/cancelled)
+- Waitlist management (auto-waitlist, auto-promotion)
+- Business metrics (fill rate, revenue per seat, cancellation rate)
+- Enhanced validation (prevent duplicates, check capacity)
+- Cascade operations (event cancelled → bookings cancelled)
+- Lifecycle action buttons in views
+
+### ✅ Commit 3: Advanced Computed Fields + Constraints (COMPLETE)
+- Computed fields with dependencies
+- Python constraints
+- SQL constraints
+- Field validations
 
 ### ✅ Commit 1: Module Foundation + Hooks (COMPLETE)
 - Module structure

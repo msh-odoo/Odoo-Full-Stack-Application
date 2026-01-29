@@ -440,6 +440,12 @@ class ServiceBooking(models.Model):
     )
     # Same pattern as service.event.active (archive instead of delete)
 
+    color = fields.Integer(
+        string='Color Index',
+        default=0,
+        help='Color index for Kanban and Calendar views (0-11)',
+    )
+
     company_id = fields.Many2one(
         'res.company',
         string='Company',

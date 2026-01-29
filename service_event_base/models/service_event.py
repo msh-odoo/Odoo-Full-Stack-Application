@@ -35,6 +35,9 @@ WHY THIS DESIGN:
 
 from odoo import api, fields, models
 from odoo.exceptions import ValidationError
+from datetime import datetime
+from odoo import fields as odoo_fields
+
 
 
 class ServiceEvent(models.Model):
@@ -117,6 +120,34 @@ class ServiceEvent(models.Model):
     # WHEN: Prefer archiving over deletion to preserve historical data
     # ALTERNATIVE: Custom state field, but active is Odoo convention
     # USAGE: archived = env['service.event'].with_context(active_test=False).search([])
+    # ========================================================================
+
+    color = fields.Integer(
+        string='Color Index',
+        default=0,
+        help='Color index for kanban view (0-11)',
+    )
+    # ========================================================================
+    # COLOR FIELD - FOR KANBAN VIEW CUSTOMIZATION
+    # ========================================================================
+    # WHY: Allows users to color-code events in kanban view
+    # HOW: Integer 0-11 maps to Odoo's predefined color palette
+    # WHEN: Useful for visual categorization (urgent=red, normal=blue, etc.)
+    # USAGE: Users can click color picker in kanban to set color
+    # ========================================================================
+
+    color = fields.Integer(
+        string='Color Index',
+        default=0,
+        help='Color index for Kanban and Calendar views (0-11)',
+    )
+    # ========================================================================
+    # COLOR FIELD - UI VISUALIZATION
+    # ========================================================================
+    # WHY: Used by Kanban and Calendar views for visual categorization
+    # HOW: Integer 0-11 maps to predefined Odoo color palette
+    # WHEN: Helps users quickly identify events visually
+    # USAGE: Users can pick colors in Kanban view to mark priorities/types
     # ========================================================================
 
     # ========================================================================
@@ -207,45 +238,44 @@ class ServiceEvent(models.Model):
     def _compute_final_price(self):
         """
         Compute final price with early bird and discount logic.
-        
+
         BUSINESS RULES:
             1. Early bird price takes precedence if conditions met
             2. Discount percentage applies to selected base price
             3. Early bird requires both price AND deadline set
             4. Discount cannot exceed 100% (validated by constraint)
-        
+
         PRIORITY:
             Early bird (if applicable) → Discount % → Final price
-        
+
         REAL-WORLD SCENARIO:
             Event: "Python Workshop"
             Regular: $149
             Early bird: $99 (until Jan 15)
             Additional discount: 10% for members
-            
+
             Customer books Jan 10 with member discount:
                 Base: $99 (early bird)
                 Discount: $99 * 10% = $9.90
                 Final: $89.10
         """
-        from odoo import fields as odoo_fields
-        
+
         for event in self:
             base_price = event.price_unit
-            
+
             # Check if early bird pricing applies
             if event.early_bird_price > 0 and event.early_bird_deadline:
                 today = odoo_fields.Date.context_today(event)
                 if today <= event.early_bird_deadline:
                     base_price = event.early_bird_price
-            
+
             # Apply discount percentage
             if event.discount_percentage > 0:
                 discount_amount = base_price * (event.discount_percentage / 100.0)
                 final = base_price - discount_amount
             else:
                 final = base_price
-            
+
             event.final_price = final
 
     # ========================================================================
@@ -290,6 +320,7 @@ class ServiceEvent(models.Model):
         string='Registration Open',
         compute='_compute_registration_open',
         store=False,
+        search='_search_registration_open',
         help='Whether event is accepting new bookings',
     )
     # WHY computed: Derived from state + capacity + other factors
@@ -300,37 +331,67 @@ class ServiceEvent(models.Model):
     def _compute_registration_open(self):
         """
         Determine if event is accepting new bookings.
-        
+
         CONDITIONS (ALL must be true):
             1. State = 'published'
             2. Not at capacity (or unlimited capacity)
             3. Event hasn't started yet (if start_datetime set)
-        
+
         USED IN:
             - UI to show/hide booking button
             - Validation before creating booking
             - Website filtering (show only open events)
         """
         from odoo import fields as odoo_fields
-        
+
         for event in self:
             is_open = False
-            
+
             if event.state == 'published':
                 # Check capacity
                 has_capacity = True
                 if event.capacity > 0:
                     has_capacity = event.booking_count_confirmed < event.capacity
-                
+
                 # Check if event hasn't started
                 not_started = True
                 if event.start_datetime:
                     now = odoo_fields.Datetime.now()
                     not_started = event.start_datetime > now
-                
+
                 is_open = has_capacity and not_started
-            
+
             event.registration_open = is_open
+
+    def _search_registration_open(self, operator, value):
+        """
+        Enable filtering events where registration is open.
+
+        Criteria:
+            - state = 'published'
+            - capacity > 0 → available_seats > 0
+            - start_datetime > now
+        """
+
+        if operator == '=' and value:
+            # Search for events with open registration
+            return [
+                ('state', '=', 'published'),
+                ('start_datetime', '>', datetime.now()),
+                '|',
+                ('capacity', '=', 0),  # Unlimited
+                ('available_seats', '>', 0),  # Has seats
+            ]
+        else:
+            # Search for events with closed registration
+            return [
+                '|', '|',
+                ('state', '!=', 'published'),
+                ('start_datetime', '<=', datetime.now()),
+                '&',
+                ('capacity', '>', 0),
+                ('available_seats', '<=', 0),
+            ]
 
     # ========================================================================
     # MANY2ONE RELATIONSHIP - CATEGORY
@@ -714,26 +775,26 @@ class ServiceEvent(models.Model):
     def _compute_business_metrics(self):
         """
         Compute key business performance indicators.
-        
+
         METRICS:
             fill_rate: How full is the event? (confirmed / capacity)
             revenue_per_seat: Revenue efficiency (revenue / capacity)
             cancellation_rate: Customer retention (cancelled / total)
-        
+
         BUSINESS APPLICATIONS:
             - Dashboard KPIs
             - Performance reports
             - Pricing optimization
             - Event comparison
             - Historical trends
-        
+
         REAL-WORLD EXAMPLE:
             Event: "Python Workshop"
             Capacity: 20
             Confirmed: 18
             Revenue: $2,700
             Cancelled: 2 (out of 20 total bookings)
-            
+
             fill_rate = 90% (18/20 * 100)
             revenue_per_seat = $135 ($2,700/20)
             cancellation_rate = 10% (2/20 * 100)
@@ -744,13 +805,13 @@ class ServiceEvent(models.Model):
                 event.fill_rate = (event.booking_count_confirmed / event.capacity) * 100
             else:
                 event.fill_rate = 0.0
-            
+
             # Revenue per Seat
             if event.capacity > 0:
                 event.revenue_per_seat = event.total_revenue / event.capacity
             else:
                 event.revenue_per_seat = 0.0
-            
+
             # Cancellation Rate
             total_bookings = len(event.booking_ids)
             if total_bookings > 0:
@@ -1000,10 +1061,10 @@ class ServiceEvent(models.Model):
     def _check_early_bird_price(self):
         """
         Validate early bird price is less than regular price.
-        
+
         BUSINESS RULE:
             Early bird pricing should offer a discount, not increase price.
-        
+
         VALIDATION:
             If early_bird_price set, must be < price_unit
             If early_bird_price = 0, validation skipped (no early bird)
@@ -1019,7 +1080,7 @@ class ServiceEvent(models.Model):
     def _check_early_bird_deadline(self):
         """
         Ensure early bird deadline is before event start.
-        
+
         BUSINESS LOGIC:
             Can't offer early bird pricing after event has started.
         """
@@ -1028,7 +1089,7 @@ class ServiceEvent(models.Model):
                 # Convert date to datetime for comparison
                 from datetime import datetime, time
                 deadline_dt = datetime.combine(event.early_bird_deadline, time.max)
-                
+
                 if deadline_dt >= event.start_datetime:
                     raise ValidationError(
                         f"Early bird deadline must be before event start time for '{event.name}'"
@@ -1041,15 +1102,15 @@ class ServiceEvent(models.Model):
     def action_publish(self):
         """
         Publish event (make available for booking).
-        
+
         BUSINESS RULES:
             - Event must have price set
             - Event must have capacity set (or 0 for unlimited)
             - Event must have category
-        
+
         STATE TRANSITION:
             draft → published
-        
+
         EFFECTS:
             - Event visible on website
             - Customers can book
@@ -1059,26 +1120,26 @@ class ServiceEvent(models.Model):
             # Validation
             if not event.price_unit and not event.final_price:
                 raise ValidationError(f"Cannot publish '{event.name}': Price must be set")
-            
+
             if not event.category_id:
                 raise ValidationError(f"Cannot publish '{event.name}': Category must be set")
-            
+
             event.write({'state': 'published'})
-        
+
         return True
 
     def action_close_registration(self):
         """
         Close registration (stop accepting new bookings).
-        
+
         USE CASES:
             - Manually close when prep work starts
             - Event is full (auto-triggered)
             - Last-minute changes needed
-        
+
         STATE TRANSITION:
             published → registration_closed
-        
+
         EFFECTS:
             - Event still visible but can't book
             - Existing bookings unaffected
@@ -1090,15 +1151,15 @@ class ServiceEvent(models.Model):
     def action_mark_completed(self):
         """
         Mark event as completed (event has occurred).
-        
+
         USE CASES:
             - Event date has passed
             - Manual marking after event concludes
-        
+
         STATE TRANSITION:
             registration_closed → completed
             published → completed (if registration wasn't closed first)
-        
+
         EFFECTS:
             - Event archived from active lists
             - Used for historical reporting
@@ -1110,15 +1171,15 @@ class ServiceEvent(models.Model):
     def action_cancel_event(self):
         """
         Cancel the event.
-        
+
         BUSINESS IMPACT:
             - All bookings should be cancelled
             - Refunds may be needed
             - Notifications sent to customers
-        
+
         STATE TRANSITION:
             Any state → cancelled
-        
+
         CASCADE EFFECTS:
             - Cancel all associated bookings
             - Could trigger refund workflow
@@ -1131,19 +1192,19 @@ class ServiceEvent(models.Model):
             )
             if bookings_to_cancel:
                 bookings_to_cancel.action_cancel()
-            
+
             event.write({'state': 'cancelled'})
-        
+
         return True
 
     def action_reset_to_draft(self):
         """
         Reset event to draft status.
-        
+
         USE CASE:
             - Unpublish event for major changes
             - Reuse cancelled event
-        
+
         VALIDATION:
             - Cannot reset if confirmed bookings exist
         """
@@ -1153,9 +1214,9 @@ class ServiceEvent(models.Model):
                     f"Cannot reset '{event.name}' to draft: "
                     f"{event.booking_count_confirmed} confirmed bookings exist"
                 )
-            
+
             event.write({'state': 'draft'})
-        
+
         return True
 
     # ========================================================================
@@ -1165,128 +1226,128 @@ class ServiceEvent(models.Model):
     def get_applicable_price(self, booking_date=None):
         """
         Calculate price applicable for a specific booking date.
-        
+
         PARAMETERS:
             booking_date: Date of booking (default: today)
-        
+
         RETURNS:
             Float: Price applicable on that date
-        
+
         BUSINESS LOGIC:
             - Check if early bird deadline applies
             - Apply discount percentage
             - Return final calculated price
-        
+
         USAGE:
             price = event.get_applicable_price(fields.Date.today())
             booking.create({'amount': price})
         """
         self.ensure_one()
-        
+
         from odoo import fields as odoo_fields
         if booking_date is None:
             booking_date = odoo_fields.Date.context_today(self)
-        
+
         base_price = self.price_unit
-        
+
         # Check early bird
         if self.early_bird_price > 0 and self.early_bird_deadline:
             if booking_date <= self.early_bird_deadline:
                 base_price = self.early_bird_price
-        
+
         # Apply discount
         if self.discount_percentage > 0:
             discount_amount = base_price * (self.discount_percentage / 100.0)
             final = base_price - discount_amount
         else:
             final = base_price
-        
+
         return final
 
     def check_booking_allowed(self):
         """
         Check if new bookings are allowed for this event.
-        
+
         RETURNS:
             (bool, str): (allowed, reason_if_not_allowed)
-        
+
         BUSINESS RULES CHECKED:
             1. Event must be published
             2. Must have capacity (or unlimited)
             3. Event must not have started
             4. Registration must be open
-        
+
         USAGE:
             allowed, reason = event.check_booking_allowed()
             if not allowed:
                 raise ValidationError(reason)
         """
         self.ensure_one()
-        
+
         if self.state != 'published':
             return False, f"Event '{self.name}' is not published (current state: {self.state})"
-        
+
         if not self.registration_open:
             return False, f"Registration is closed for '{self.name}'"
-        
+
         if self.capacity > 0 and self.booking_count_confirmed >= self.capacity:
             return False, f"Event '{self.name}' is at full capacity ({self.capacity} seats)"
-        
+
         if self.start_datetime:
             from odoo import fields as odoo_fields
             now = odoo_fields.Datetime.now()
             if self.start_datetime <= now:
                 return False, f"Event '{self.name}' has already started"
-        
+
         return True, ""
 
     def _promote_from_waitlist(self):
         """
         Automatically promote first person from waitlist when spot opens.
-        
+
         TRIGGERED BY:
             - Confirmed booking cancelled
             - Capacity increased
-        
+
         BUSINESS LOGIC:
             - Find oldest waitlisted booking (FIFO)
             - Promote to confirmed
             - Could send notification email
-        
+
         USAGE:
             booking.action_cancel()  # Frees a spot
             event._promote_from_waitlist()  # Auto-promotes next in line
         """
         self.ensure_one()
-        
+
         # Check if promotion possible
         if self.capacity > 0 and self.booking_count_confirmed >= self.capacity:
             return  # Still at capacity
-        
+
         # Find first waitlisted booking (oldest first)
         waitlisted = self.booking_ids.filtered(
             lambda b: b.state == 'waitlisted'
         ).sorted('create_date')
-        
+
         if waitlisted:
             first_in_line = waitlisted[0]
             first_in_line.write({'state': 'confirmed'})
-            
+
             # Could trigger email notification here
             # first_in_line._send_promotion_notification()
-            
+
             return first_in_line
-        
+
         return None
 
     def action_view_bookings(self):
         """
         Open bookings list view filtered for this event.
-        
+
         USAGE:
             - Smart button in form view
             - Shows all bookings for this event
-        
+
         RETURNS:
             Action dictionary to open tree view
         """

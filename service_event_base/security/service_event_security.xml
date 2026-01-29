@@ -36,19 +36,19 @@
     <!--
     ODOO 19 SECURITY ARCHITECTURE:
         In Odoo 19, the security group hierarchy changed:
-        
+
         OLD (Odoo ≤18):
             res.groups → category_id → ir.module.category
-        
+
         NEW (Odoo 19+):
             res.groups → privilege_id → res.groups.privilege → category_id → ir.module.category
-        
+
         WHY THE CHANGE:
             - Better organization of related groups (User, Manager, Admin)
             - Clearer permission hierarchy
             - Improved UI for user management
             - Groups that belong to same privilege appear together
-        
+
         HOW IT WORKS:
             1. Create ir.module.category (top-level category like "Sales", "Services")
             2. Create res.groups.privilege (privilege like "Sales Access")
