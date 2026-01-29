@@ -4,10 +4,8 @@
         <menuitem name="Event Service"
             id="menu_event_service"
             web_icon="event_service_base,static/description/icon.png">
-            <!-- <menuitem id="event_service" name="Events" sequence="1"> -->
                 <menuitem id="event_service_event" name="Event" action="event_service_action" sequence="1" />
                 <menuitem id="event_service_registration" name="Registration" action="event_service_registration_action" sequence="2" />
-            <!-- </menuitem> -->
         </menuitem>
     </data>
 </odoo>

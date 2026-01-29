@@ -6,10 +6,10 @@ class EventServiceRegistration(models.Model):
     _name = "event.service.registration"
     _description = "Event Service Registration"
 
-    name = fields.Char(string="Event Name", readonly=True, copy=False)
+    name = fields.Char(readonly=True, copy=False, default= lambda self: "NEW")
     quantity = fields.Integer(string="Number of Attendees", default=1)
     amount = fields.Float(string="Total Amount", compute="_compute_amount", store=True)
-    booking_date = fields.Datetime(string="Booking Date", default=fields.Datetime.now, required=True)
+    booking_date = fields.Datetime(string="Booking Date", required=True)
     state = fields.Selection([
         ('draft', 'Draft'),
         ('confirmed', 'Confirmed'),

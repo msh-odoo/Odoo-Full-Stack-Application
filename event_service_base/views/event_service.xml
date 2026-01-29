@@ -3,22 +3,45 @@
     <record id="event_service_action" model="ir.actions.act_window">
         <field name="name">Event Service</field>
         <field name="res_model">event.service</field>
-        <field name="view_mode">list</field>
+        <field name="view_mode">list,form</field>
     </record>
 
     <record id="event_service_action_view_list" model="ir.ui.view">
-        <field name="name">Event Service</field>
+        <field name="name">event.service.list</field>
         <field name="model">event.service</field>
         <field name="arch" type="xml">
             <list string="Events">
                 <field name="name" />
-                <field name="description" />
                 <field name="price" />
+                <field name="category_id" widget="many2one" />
                 <field name="active" />
-                <field name="category_id" />
-                <field name="tag_ids" />
-                <field name="company_id" />
+                <field name="tag_ids" widget="many2many_tags" />
             </list>
+        </field>
+    </record>
+
+    <record id="event_service_action_view_form" model="ir.ui.view">
+        <field name="name">event.service.form</field>
+        <field name="model">event.service</field>
+        <field name="arch" type="xml">
+            <form string="Event Service">
+                <sheet>
+                    <group>
+                        <group name="event_details">
+                            <field name="name" />
+                            <field name="price" />
+                        </group>
+                        <group name="event_details_2">
+                            <field name="active" />
+                            <field name="tag_ids" widget="many2many_tags" />
+                            <field name="category_id" widget="many2one" />
+                        </group>
+                        <group name="event_description">
+                            <field name="description" type="html" />
+                        </group>
+                    </group>
+                </sheet>
+            </form>
         </field>
     </record>
 </odoo>
