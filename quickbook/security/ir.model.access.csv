@@ -1,0 +1,5 @@
+id,name,model_id/id,group_id/id,perm_read,perm_write,perm_create,perm_unlink
+access_service_category_manager,access_service_category_manager,model_quickbook_category,base.group_user,1,1,1,1
+access_service_tag_manager,access_service_tag_manager,model_quickbook_tag,base.group_user,1,1,1,1
+access_booking_manager,access_booking_manager,model_quickbook_booking,base.group_user,1,1,1,1
+access_services_manager,access_services_manager,model_quickbook_service,base.group_user,1,1,1,1

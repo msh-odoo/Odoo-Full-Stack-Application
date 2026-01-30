@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <!-- Action -->
+    <record id="quickbook_booking_action" model="ir.actions.act_window">
+        <field name="name">Bookings</field>
+        <field name="res_model">quickbook.booking</field>
+        <field name="context">{'search_default_draft': True}</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <!-- Search View -->
+    <record id="quickbook_booking_search_view" model="ir.ui.view">
+        <field name="name">quickbook.booking.search.view</field>
+        <field name="model">quickbook.booking</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name" />
+                <field name="partner_id" />
+                <field name="service_id" />
+                <filter name="draft" string="Draft"
+                    domain="[('state','=','draft')]" />
+                <filter name="confirmed" string="Confirmed"
+                    domain="[('state','=','confirmed')]" />
+                <filter name="cancelled" string="Cancelled"
+                    domain="[('state','=','cancelled')]" />
+                <group>
+                    <filter name="group_service"
+                        string="Service"
+                        context="{'group_by':'service_id'}" />
+                    <filter name="group_partner"
+                        string="Customer"
+                        context="{'group_by':'partner_id'}" />
+                    <filter name="group_company"
+                        string="Company"
+                        context="{'group_by':'company_id'}" />
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- List View -->
+    <record id="quickbook_booking_list_view" model="ir.ui.view">
+        <field name="name">quickbook.booking.list.view</field>
+        <field name="model">quickbook.booking</field>
+        <field name="arch" type="xml">
+            <list string="Bookings">
+                <field name="name" />
+                <field name="partner_id" />
+                <field name="service_id" />
+                <field name="booking_date" />
+                <field name="quantity" />
+                <field name="amount" />
+                <field name="user_id" />
+                <field name="available_slots" />
+                <field name="state" widget="badge" decoration-success="state=='completed'"
+                    decoration-info="state=='confirmed'" decoration-warning="state=='draft'"
+                    decoration-danger="state=='cancelled'" />
+                <field name="company_id" />
+            </list>
+        </field>
+    </record>
+
+    <!-- Form View -->
+    <record id="quickbook_booking_form_view" model="ir.ui.view">
+        <field name="name">quickbook.booking.form.view</field>
+        <field name="model">quickbook.booking</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <field name="state" widget="statusbar" options="{'clickable': '1'}" />
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" readonly="1" />
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Booking Details">
+                            <field name="partner_id" />
+                            <field name="service_id" />
+                            <field name="booking_date" />
+                            <field name="quantity" />
+                            <field name="amount" readonly="1" />
+                        </group>
+                        <group string="Assignment and Info">
+                            <field name="user_id" />
+                            <field name="company_id" />
+                            <field name="available_slots" readonly="1" />
+                            <field name="overdue_days" />
+                        </group>
+                    </group>
+                    <group string="Notes">
+                        <field name="notes" />
+                    </group>
+                    <group string="Review">
+                        <field name="review_rating" />
+                        <field name="review_comment" />
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+</odoo>

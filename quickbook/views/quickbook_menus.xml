@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <menuitem id="quickbook_root" name="Service Booking"
+        web_icon="quickbook,static/description/icon.png" />
+    <menuitem id="quickbook_booking" name="Booking" parent="quickbook_root"
+        action="quickbook_booking_action" />
+    <menuitem id="quickbook_service" name="Service" parent="quickbook_root"
+        action="quickbook_service_action" />
+    <menuitem id="quickbook_category" name="Categories" parent="quickbook_root"
+        action="quickbook_category_action" />
+    <menuitem id="quickbook_tag" name="Tags" parent="quickbook_root" action="quickbook_tag_action" />
+</odoo>
