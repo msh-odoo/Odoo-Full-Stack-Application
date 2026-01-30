@@ -5,7 +5,10 @@
         <field name="model">service.event</field>
         <field name="arch" type="xml">
             <list>
-                <field name="name" />
+                <field name="name"/>
+                <field name="category_id"/>
+                <field name="tag_ids" widget="many2many_tags"/>
+                <field name="price"/>
             </list>
         </field>
     </record>
@@ -14,11 +17,38 @@
         <field name="name">service.event.form</field>
         <field name="model">service.event</field>
         <field name="arch" type="xml">
-            <form string="Service Event" create="0">
+            <form string="Service Event">
                 <sheet>
-                    <div class="oe_title">
-                        <h1><field name="name" placeholder="Draft"/></h1>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_toggle_is_published"
+                                invisible="not is_published"
+                                class="oe_stat_button"
+                                type="object"
+                                icon="fa-globe">
+                            <div class="o_stat_info o_field_widget">
+                                <span class="o_stat_text text-success">Published</span>
+                            </div>
+                        </button>
+                        <button name="action_toggle_is_published"
+                                invisible="is_published"
+                                class="oe_stat_button"
+                                type="object"
+                                icon="fa-eye-slash">
+                            <div class="o_stat_info o_field_widget">
+                                <span class="o_stat_text text-danger">Unpublished</span>
+                            </div>
+                        </button>
                     </div>
+                    <group>
+                        <group>
+                            <div class="oe_title">
+                                <h1><field name="name" placeholder="Draft"/></h1>
+                            </div>
+                        </group>
+                        <group>
+                            <field name="image" class="oe_avatar" widget="image" nolabel="1"/>
+                        </group>
+                    </group>
                     <group name="service_event_header">
                         <group name="service_event_details">
                             <field name="description"/>
@@ -31,8 +61,9 @@
                     </group>
                     <notebook>
                         <page string="Bookings">
-                            <field name="booking_ids">
-                                <list editable="bottom">
+                            <field name="booking_ids" readonly="1">
+                                <list decoration-success="state == 'approved'" decoration-muted="state == 'rejected'">
+                                    <field name="name"/>
                                     <field name="partner_id" />
                                     <field name="quantity" />
                                     <field name="booking_date" />
@@ -42,7 +73,7 @@
                     </notebook>
                 </sheet>
 
-                <!-- <chatter/> -->
+                <chatter/>
             </form>
         </field>
     </record>

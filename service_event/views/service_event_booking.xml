@@ -4,8 +4,13 @@
         <field name="name">service.event.booking.tree</field>
         <field name="model">service.event.booking</field>
         <field name="arch" type="xml">
-            <list>
-                <field name="name" />
+            <list decoration-success="state == 'approved'" decoration-muted="state == 'rejected'">
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="service_id"/>
+                <field name="quantity"/>
+                <field name="tag_id"/>
+                <field name="booking_date"/>
             </list>
         </field>
     </record>
@@ -14,28 +19,32 @@
         <field name="name">service.event.booking.form</field>
         <field name="model">service.event.booking</field>
         <field name="arch" type="xml">
-            <form string="Service Event Booking" create="0">
+            <form string="Service Event Booking">
+                <header>
+                    <button name="action_approve" string="Approve" type="object" class="btn-primary" invisible="state == 'approved'"/>
+                    <button name="action_reject" string="Reject" type="object" invisible="state == 'rejected'"/>
+                    <field name="state" widget="statusbar"/>
+                </header>
                 <sheet>
-                    <!-- <div class="oe_title">
-                        <h1><field name="name" readonly="1" placeholder="Draft"/></h1>
-                    </div> -->
-                    <group name="service_event_header">
-                        <group name="service_event_details">
-                            <field name="name"/>
+                    <div class="oe_title">
+                        <h1><field name="name"/></h1>
+                    </div>
+                    <group name="service_event_details">
+                        <group>
                             <field name="service_id"/>
                             <field name="partner_id"/>
                             <field name="quantity"/>
                             <field name="tag_id"/>
+                        </group>
+                        <group>
                             <field name="booking_date"/>
                             <field name="amount"/>
-                            <field name="state"/>
                             <field name="active"/>
                             <field name="company_id"/>
                         </group>
                     </group>
                 </sheet>
-
-                <!-- <chatter/> -->
+                <chatter/>
             </form>
         </field>
     </record>

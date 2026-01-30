@@ -1,20 +1,22 @@
 from odoo import api, fields, models
+from odoo.exceptions import ValidationError
 
 
 class ServiceEventBooking(models.Model):
     _name = 'service.event.booking'
+    _inherit = ['mail.thread']
     _description = 'Service Event Booking'
     _order = 'id desc'
 
-    name = fields.Char(string='Name', readonly=True, required=True)
+    name = fields.Char(string='Name', readonly=True, default="/")
     partner_id = fields.Many2one('res.partner', string='Partner', required=True)
     service_id = fields.Many2one('service.event', string='Service', required=True)
     quantity = fields.Integer(string='No. of Passes', required=True)
     state = fields.Selection([
         ('draft', 'Draft'),
-        ('confirm', 'Confirm'),
-        ('cancel', 'Cancel'),
-    ], string='State', default='draft')
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ], string='State', default='draft', tracking=True)
     booking_date = fields.Date(string='Date', required=True)
     amount = fields.Float(string='Amount', compute="_compute_amount", store=True)
     active = fields.Boolean(string='Active', default=True)
@@ -25,7 +27,7 @@ class ServiceEventBooking(models.Model):
     def _validate_booking_date(self):
         for record in self:
             if record.booking_date < fields.Date.today():
-                raise ValueError('Booking date cannot be in the past!')
+                raise ValidationError('Booking date cannot be in the past!')
 
     _unique_booking = models.Constraint(
         'unique (partner_id, service_id)',
@@ -43,3 +45,16 @@ class ServiceEventBooking(models.Model):
         for vals in vals_list:
             vals['name'] = self.env['ir.sequence'].next_by_code('service.event.booking')
         return super().create(vals_list)
+
+    def write(self, vals):
+        if self.state == 'approved':
+            raise ValidationError('You cannot modify a booking that is approved!')
+        return super().write(vals)
+
+    def action_approve(self):
+        for record in self:
+            record.state = 'approved'
+
+    def action_reject(self):
+        for record in self:
+            record.state = 'rejected'
