@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="quickbook_booking_sequence" model="ir.sequence">
+        <field name="name">Quickbook Booking Sequence</field>
+        <field name="code">quickbook.bookings</field>
+        <field name="prefix">BKOR</field>
+        <field name="padding">3</field>
+    </record>
+</odoo>

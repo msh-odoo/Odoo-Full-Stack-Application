@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+
+        <!-- Tags Demo Data -->
+        <record id="tag_popular" model="quickbook.tag">
+            <field name="name">Popular</field>
+            <field name="color">3</field>
+            <field name="description">Popular services with high demand</field>
+        </record>
+
+        <record id="tag_premium" model="quickbook.tag">
+            <field name="name">Premium</field>
+            <field name="color">6</field>
+            <field name="description">Premium and exclusive services</field>
+        </record>
+
+        <record id="tag_beginner_friendly" model="quickbook.tag">
+            <field name="name">Beginner Friendly</field>
+            <field name="color">1</field>
+            <field name="description">Services suitable for beginners</field>
+        </record>
+
+        <!-- Categories Demo Data -->
+        <record id="category_fitness" model="quickbook.category">
+            <field name="name">Fitness</field>
+            <field name="description">Physical fitness and training services</field>
+        </record>
+
+        <record id="category_wellness" model="quickbook.category">
+            <field name="name">Wellness</field>
+            <field name="description">Health and wellness related services</field>
+        </record>
+
+        <record id="category_education" model="quickbook.category">
+            <field name="name">Education</field>
+            <field name="description">Educational and learning services</field>
+        </record>
+
+        <!-- Services Demo Data -->
+        <record id="service_yoga" model="quickbook.service">
+            <field name="name">Yoga Classes</field>
+            <field name="description">&lt;p&gt;Relaxing and rejuvenating yoga sessions for all
+                levels. Learn proper breathing techniques and improve flexibility.&lt;/p&gt;</field>
+            <field name="price">50.0</field>
+            <field name="active">True</field>
+            <field name="category_id" ref="category_wellness" />
+            <field name="tag_ids"
+                eval="[(6, 0, [ref('tag_popular'), ref('tag_beginner_friendly')])]" />
+            <field name="capacity">10</field>
+            <field name="duration">1.5</field>
+        </record>
+
+        <record id="service_personal_training" model="quickbook.service">
+            <field name="name">Personal Training Session</field>
+            <field name="description">&lt;p&gt;One-on-one personalized fitness training tailored to
+                your goals and fitness level.&lt;/p&gt;</field>
+            <field name="price">80.0</field>
+            <field name="active">True</field>
+            <field name="category_id" ref="category_fitness" />
+            <field name="tag_ids" eval="[(6, 0, [ref('tag_premium')])]" />
+            <field name="capacity">1</field>
+            <field name="duration">1.0</field>
+        </record>
+
+        <record id="service_meditation" model="quickbook.service">
+            <field name="name">Meditation Workshop</field>
+            <field name="description">&lt;p&gt;Guided meditation sessions to reduce stress and
+                improve mental clarity.&lt;/p&gt;</field>
+            <field name="price">40.0</field>
+            <field name="active">True</field>
+            <field name="category_id" ref="category_wellness" />
+            <field name="tag_ids"
+                eval="[(6, 0, [ref('tag_popular'), ref('tag_beginner_friendly')])]" />
+            <field name="capacity">15</field>
+            <field name="duration">1.0</field>
+        </record>
+        <record id="service_pilates" model="quickbook.service">
+            <field name="name">Pilates Training</field>
+            <field name="description">&lt;p&gt;Core-focused pilates sessions to improve posture and
+                strength.&lt;/p&gt;</field>
+            <field name="price">60.0</field>
+            <field name="active">True</field>
+            <field name="category_id" ref="category_fitness" />
+            <field name="tag_ids" eval="[(6, 0, [ref('tag_popular')])]" />
+            <field name="capacity">8</field>
+            <field name="duration">1.0</field>
+        </record>
+
+        <record id="service_zumba" model="quickbook.service">
+            <field name="name">Zumba Dance</field>
+            <field name="description">&lt;p&gt;High-energy dance workouts with fun music.&lt;/p&gt;</field>
+            <field name="price">45.0</field>
+            <field name="active">True</field>
+            <field name="category_id" ref="category_fitness" />
+            <field name="tag_ids" eval="[(6, 0, [ref('tag_beginner_friendly')])]" />
+            <field name="capacity">20</field>
+            <field name="duration">1.0</field>
+        </record>
+
+        <record id="service_nutrition" model="quickbook.service">
+            <field name="name">Nutrition Consultation</field>
+            <field name="description">&lt;p&gt;Personalized nutrition and diet planning
+                sessions.&lt;/p&gt;</field>
+            <field name="price">70.0</field>
+            <field name="active">True</field>
+            <field name="category_id" ref="category_wellness" />
+            <field name="tag_ids" eval="[(6, 0, [ref('tag_premium')])]" />
+            <field name="capacity">1</field>
+            <field name="duration">1.0</field>
+        </record>
+
+        <record id="service_mindfulness" model="quickbook.service">
+            <field name="name">Mindfulness Coaching</field>
+            <field name="description">&lt;p&gt;Mindfulness techniques for better focus and emotional
+                balance.&lt;/p&gt;</field>
+            <field name="price">55.0</field>
+            <field name="active">True</field>
+            <field name="category_id" ref="category_wellness" />
+            <field name="tag_ids" eval="[(6, 0, [ref('tag_popular')])]" />
+            <field name="capacity">5</field>
+            <field name="duration">1.0</field>
+        </record>
+
+        <record id="service_public_speaking" model="quickbook.service">
+            <field name="name">Public Speaking Workshop</field>
+            <field name="description">&lt;p&gt;Improve confidence and communication
+                skills.&lt;/p&gt;</field>
+            <field name="price">90.0</field>
+            <field name="active">True</field>
+            <field name="category_id" ref="category_education" />
+            <field name="tag_ids" eval="[(6, 0, [ref('tag_premium')])]" />
+            <field name="capacity">12</field>
+            <field name="duration">2.0</field>
+        </record>
+
+        <record id="service_time_management" model="quickbook.service">
+            <field name="name">Time Management Coaching</field>
+            <field name="description">&lt;p&gt;Learn to manage time effectively and boost
+                productivity.&lt;/p&gt;</field>
+            <field name="price">65.0</field>
+            <field name="active">True</field>
+            <field name="category_id" ref="category_education" />
+            <field name="tag_ids" eval="[(6, 0, [ref('tag_beginner_friendly')])]" />
+            <field name="capacity">10</field>
+            <field name="duration">1.5</field>
+        </record>
+
+
+        <!-- Bookings Demo Data -->
+        <record id="booking_john_yoga" model="quickbook.booking">
+            <field name="partner_id" ref="base.partner_admin" />
+            <field name="service_id" ref="service_yoga" />
+            <field name="state">confirmed</field>
+            <field name="booking_date">2026-05-05 09:00:00</field>
+            <field name="quantity">1</field>
+            <field name="notes">Please ensure mat is provided</field>
+            <field name="user_id" ref="base.user_admin" />
+        </record>
+
+        <record id="booking_jane_personal_training" model="quickbook.booking">
+            <field name="partner_id" ref="base.partner_admin" />
+            <field name="service_id" ref="service_personal_training" />
+            <field name="state">draft</field>
+            <field name="booking_date">2026-05-06 14:00:00</field>
+            <field name="quantity">1</field>
+            <field name="notes">Focus on upper body strength training</field>
+            <field name="user_id" ref="base.user_admin" />
+        </record>
+
+        <record id="booking_meditation_workshop" model="quickbook.booking">
+            <field name="partner_id" ref="base.partner_admin" />
+            <field name="service_id" ref="service_meditation" />
+            <field name="state">completed</field>
+            <field name="booking_date">2026-04-28 18:00:00</field>
+            <field name="quantity">1</field>
+            <field name="user_id" ref="base.user_admin" />
+        </record>
+
+        <record id="booking_yoga_1" model="quickbook.booking">
+            <field name="partner_id" ref="base.partner_admin" />
+            <field name="service_id" ref="service_yoga" />
+            <field name="state">confirmed</field>
+            <field name="booking_date">2026-06-10 08:00:00</field>
+            <field name="quantity">1</field>
+            <field name="user_id" ref="base.user_admin" />
+        </record>
+
+        <record id="booking_pilates" model="quickbook.booking">
+            <field name="partner_id" ref="base.partner_admin" />
+            <field name="service_id" ref="service_pilates" />
+            <field name="state">draft</field>
+            <field name="booking_date">2026-06-12 10:00:00</field>
+            <field name="quantity">1</field>
+            <field name="user_id" ref="base.user_admin" />
+        </record>
+
+        <record id="booking_zumba" model="quickbook.booking">
+            <field name="partner_id" ref="base.partner_admin" />
+            <field name="service_id" ref="service_zumba" />
+            <field name="state">confirmed</field>
+            <field name="booking_date">2026-06-15 18:00:00</field>
+            <field name="quantity">1</field>
+            <field name="user_id" ref="base.user_admin" />
+        </record>
+
+        <record id="booking_nutrition" model="quickbook.booking">
+            <field name="partner_id" ref="base.partner_admin" />
+            <field name="service_id" ref="service_nutrition" />
+            <field name="state">draft</field>
+            <field name="booking_date">2026-06-18 11:00:00</field>
+            <field name="quantity">1</field>
+            <field name="user_id" ref="base.user_admin" />
+        </record>
+
+        <record id="booking_mindfulness" model="quickbook.booking">
+            <field name="partner_id" ref="base.partner_admin" />
+            <field name="service_id" ref="service_mindfulness" />
+            <field name="state">confirmed</field>
+            <field name="booking_date">2026-06-20 09:30:00</field>
+            <field name="quantity">1</field>
+            <field name="user_id" ref="base.user_admin" />
+        </record>
+
+        <record id="booking_public_speaking" model="quickbook.booking">
+            <field name="partner_id" ref="base.partner_admin" />
+            <field name="service_id" ref="service_public_speaking" />
+            <field name="state">draft</field>
+            <field name="booking_date">2026-06-25 14:00:00</field>
+            <field name="quantity">1</field>
+            <field name="user_id" ref="base.user_admin" />
+        </record>
+
+    </data>
+</odoo>
