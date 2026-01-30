@@ -1,0 +1,12 @@
+<odoo>
+    <!-- Top menu item -->
+    <menuitem name="On-Demand Services" id="ods.menu_root"
+        web_icon="ods,static/description/icon.png"/>
+
+    <!-- menu categories -->
+    <menuitem name="Services" id="ods.menu_service" parent="ods.menu_root"/>
+
+    <!-- actions -->
+    <menuitem name="All Services" id="ods.menu_all_service" parent="ods.menu_service"
+        action="ods.service_action_window"/>
+</odoo>
