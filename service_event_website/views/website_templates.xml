@@ -1,0 +1,445 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+    Website Templates for Service Event Pages
+
+    QWEB TEMPLATE BASICS:
+    =====================
+    - QWeb is Odoo's templating engine
+    - Uses XML with special t- attributes
+    - Inherits from website.layout for standard website wrapper
+    - Access Python variables directly in templates
+
+    T- ATTRIBUTES:
+    - t-call: Include another template
+    - t-foreach: Loop over collections
+    - t-if: Conditional rendering
+    - t-field: Render and edit model fields
+    - t-esc: Escape HTML (prevent XSS)
+    - t-raw: Render raw HTML (dangerous!)
+    - t-att-*: Set dynamic attributes
+    -->
+
+    <!-- ================================================================== -->
+    <!-- EVENT LISTING PAGE -->
+    <!-- ================================================================== -->
+    <!--
+    Displays all published events in a grid layout.
+
+    VARIABLES AVAILABLE:
+    - events: Recordset of service.event
+    - categories: Recordset of service.event.category
+    - page_name: String ('events')
+
+    LAYOUT:
+    - Inherits website.layout (header, footer, theme)
+    - Bootstrap 5 grid system
+    - Responsive cards
+    -->
+    <template id="events_listing" name="Events Listing">
+        <t t-call="website.layout">
+            <div id="wrap" class="oe_structure">
+                <div class="container py-5">
+
+                    <!-- Page Header -->
+                    <div class="row mb-5">
+                        <div class="col-12 text-center">
+                            <h1 class="display-4">Upcoming Events</h1>
+                            <p class="lead text-muted">
+                                Browse our selection of workshops, webinars, and training sessions
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Events Grid -->
+                    <div class="row">
+                        <t t-if="events">
+                            <!-- Loop through events -->
+                            <t t-foreach="events" t-as="event">
+                                <div class="col-md-6 col-lg-4 mb-4">
+                                    <div class="card h-100 shadow-sm">
+                                        <!-- Event Image Placeholder -->
+                                        <div class="card-img-top bg-primary text-white d-flex align-items-center justify-content-center" style="height: 200px;">
+                                            <i class="fa fa-calendar fa-3x"/>
+                                        </div>
+
+                                        <!-- Event Details -->
+                                        <div class="card-body">
+                                            <h5 class="card-title">
+                                                <t t-esc="event.name"/>
+                                            </h5>
+
+                                            <!-- Category Badge -->
+                                            <t t-if="event.category_id">
+                                                <span class="badge bg-info mb-2">
+                                                    <t t-esc="event.category_id.name"/>
+                                                </span>
+                                            </t>
+
+                                            <!-- Event Info -->
+                                            <p class="card-text text-muted small">
+                                                <i class="fa fa-calendar-o"/>
+                                                <t t-esc="event.start_datetime" t-options="{'widget': 'datetime'}"/>
+                                            </p>
+
+                                            <p class="card-text text-muted small">
+                                                <i class="fa fa-clock-o"/>
+                                                Duration: <t t-esc="event.duration"/> hours
+                                            </p>
+
+                                            <p class="card-text text-muted small">
+                                                <i class="fa fa-users"/>
+                                                <t t-if="event.capacity > 0">
+                                                    <t t-esc="event.available_seats"/> / <t t-esc="event.capacity"/> seats available
+                                                </t>
+                                                <t t-else="">
+                                                    Unlimited capacity
+                                                </t>
+                                            </p>
+
+                                            <!-- Price -->
+                                            <h4 class="text-primary">
+                                                <t t-esc="event.final_price" t-options="{'widget': 'monetary', 'display_currency': event.currency_id}"/>
+                                            </h4>
+                                        </div>
+
+                                        <!-- Card Footer with Button -->
+                                        <div class="card-footer bg-white">
+                                            <a t-attf-href="/events/#{event.id}" class="btn btn-primary w-100">
+                                                View Details
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </t>
+                        </t>
+
+                        <!-- No Events Found -->
+                        <t t-else="">
+                            <div class="col-12">
+                                <div class="alert alert-info text-center">
+                                    <h4>No upcoming events</h4>
+                                    <p>Check back soon for new workshops and training sessions!</p>
+                                </div>
+                            </div>
+                        </t>
+                    </div>
+
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- ================================================================== -->
+    <!-- EVENT DETAIL PAGE -->
+    <!-- ================================================================== -->
+    <!--
+    Shows detailed information about a single event with booking form.
+
+    VARIABLES AVAILABLE:
+    - event: Single service.event record
+    - is_logged_in: Boolean (True if user logged in)
+    - user_bookings: Recordset of user's bookings for this event
+    -->
+    <template id="event_detail" name="Event Detail">
+        <t t-call="website.layout">
+            <div id="wrap" class="oe_structure">
+                <div class="container py-5">
+
+                    <!-- Breadcrumb -->
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="/events">Events</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">
+                                <t t-esc="event.name"/>
+                            </li>
+                        </ol>
+                    </nav>
+
+                    <div class="row">
+                        <!-- Event Details Column -->
+                        <div class="col-lg-8">
+                            <!-- Event Header -->
+                            <h1 class="mb-4"><t t-esc="event.name"/></h1>
+
+                            <!-- Category and Tags -->
+                            <div class="mb-3">
+                                <t t-if="event.category_id">
+                                    <span class="badge bg-primary me-2">
+                                        <t t-esc="event.category_id.name"/>
+                                    </span>
+                                </t>
+
+                                <t t-foreach="event.tag_ids" t-as="tag">
+                                    <span class="badge bg-secondary me-1">
+                                        <t t-esc="tag.name"/>
+                                    </span>
+                                </t>
+                            </div>
+
+                            <!-- Event Image Placeholder -->
+                            <div class="bg-light border rounded mb-4 d-flex align-items-center justify-content-center" style="height: 400px;">
+                                <i class="fa fa-calendar fa-5x text-muted"/>
+                            </div>
+
+                            <!-- Event Description -->
+                            <h3>About This Event</h3>
+                            <div class="mb-4">
+                                <t t-if="event.description">
+                                    <p t-field="event.description"/>
+                                </t>
+                                <t t-else="">
+                                    <p class="text-muted">No description available.</p>
+                                </t>
+                            </div>
+
+                            <!-- Event Schedule -->
+                            <h3>Schedule</h3>
+                            <ul class="list-unstyled mb-4">
+                                <li class="mb-2">
+                                    <i class="fa fa-calendar text-primary"/>
+                                    <strong>Start:</strong>
+                                    <t t-esc="event.start_datetime" t-options="{'widget': 'datetime'}"/>
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fa fa-clock-o text-primary"/>
+                                    <strong>Duration:</strong>
+                                    <t t-esc="event.duration"/> hours
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fa fa-calendar-check-o text-primary"/>
+                                    <strong>End:</strong>
+                                    <t t-esc="event.end_datetime" t-options="{'widget': 'datetime'}"/>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- Booking Sidebar -->
+                        <div class="col-lg-4">
+                            <div class="card shadow-lg sticky-top" style="top: 20px;">
+                                <div class="card-body">
+                                    <!-- Price -->
+                                    <h2 class="text-primary mb-3">
+                                        <t t-esc="event.final_price" t-options="{'widget': 'monetary', 'display_currency': event.currency_id}"/>
+                                    </h2>
+
+                                    <!-- Event Info -->
+                                    <ul class="list-unstyled mb-4">
+                                        <li class="mb-2">
+                                            <i class="fa fa-users"/>
+                                            <t t-if="event.capacity > 0">
+                                                <strong><t t-esc="event.available_seats"/></strong> seats left
+                                            </t>
+                                            <t t-else="">
+                                                Unlimited seats
+                                            </t>
+                                        </li>
+
+                                        <li class="mb-2">
+                                            <t t-if="event.registration_open">
+                                                <i class="fa fa-check-circle text-success"/>
+                                                Registration Open
+                                            </t>
+                                            <t t-else="">
+                                                <i class="fa fa-times-circle text-danger"/>
+                                                Registration Closed
+                                            </t>
+                                        </li>
+                                    </ul>
+
+                                    <!-- Booking Button/Form -->
+                                    <t t-if="is_logged_in">
+                                        <!-- User is logged in -->
+                                        <t t-if="event.registration_open">
+                                            <!-- Check if user already booked -->
+                                            <t t-if="user_bookings">
+                                                <div class="alert alert-success">
+                                                    <i class="fa fa-check-circle"/>
+                                                    You have already booked this event!
+                                                </div>
+                                                <a href="/my/bookings" class="btn btn-outline-primary w-100">
+                                                    View My Bookings
+                                                </a>
+                                            </t>
+                                            <t t-else="">
+                                                <!-- Booking form -->
+                                                <form action="/events/book" method="post">
+                                                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                                    <input type="hidden" name="event_id" t-att-value="event.id"/>
+
+                                                    <button type="submit" class="btn btn-primary btn-lg w-100">
+                                                        <i class="fa fa-ticket"/> Book Now
+                                                    </button>
+                                                </form>
+                                            </t>
+                                        </t>
+                                        <t t-else="">
+                                            <!-- Registration closed -->
+                                            <button class="btn btn-secondary btn-lg w-100" disabled="disabled">
+                                                Registration Closed
+                                            </button>
+                                        </t>
+                                    </t>
+                                    <t t-else="">
+                                        <!-- User not logged in -->
+                                        <a href="/web/login?redirect=/events/%s" t-att-href="'/web/login?redirect=/events/%s' % event.id" class="btn btn-primary btn-lg w-100">
+                                            <i class="fa fa-sign-in"/> Login to Book
+                                        </a>
+                                        <p class="text-muted small text-center mt-2">
+                                            Don't have an account? <a href="/web/signup">Sign up</a>
+                                        </p>
+                                    </t>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- ================================================================== -->
+    <!-- BOOKING CONFIRMATION PAGE -->
+    <!-- ================================================================== -->
+    <!--
+    Shows confirmation after successful booking.
+
+    VARIABLES AVAILABLE:
+    - booking: service.booking record
+    - event: service.event record
+    -->
+    <template id="booking_confirmation" name="Booking Confirmation">
+        <t t-call="website.layout">
+            <div id="wrap" class="oe_structure">
+                <div class="container py-5">
+                    <div class="row justify-content-center">
+                        <div class="col-md-8">
+
+                            <!-- Success Message -->
+                            <div class="text-center mb-5">
+                                <i class="fa fa-check-circle text-success" style="font-size: 80px;"/>
+                                <h1 class="mt-4">Booking Confirmed!</h1>
+                                <p class="lead">
+                                    Your booking has been successfully confirmed.
+                                </p>
+                            </div>
+
+                            <!-- Booking Details Card -->
+                            <div class="card shadow-lg">
+                                <div class="card-header bg-primary text-white">
+                                    <h4 class="mb-0">Booking Details</h4>
+                                </div>
+                                <div class="card-body">
+                                    <dl class="row mb-0">
+                                        <dt class="col-sm-4">Booking Number:</dt>
+                                        <dd class="col-sm-8">
+                                            <strong><t t-esc="booking.booking_number"/></strong>
+                                        </dd>
+
+                                        <dt class="col-sm-4">Event:</dt>
+                                        <dd class="col-sm-8">
+                                            <t t-esc="event.name"/>
+                                        </dd>
+
+                                        <dt class="col-sm-4">Date:</dt>
+                                        <dd class="col-sm-8">
+                                            <t t-esc="event.start_datetime" t-options="{'widget': 'datetime'}"/>
+                                        </dd>
+
+                                        <dt class="col-sm-4">Duration:</dt>
+                                        <dd class="col-sm-8">
+                                            <t t-esc="event.duration"/> hours
+                                        </dd>
+
+                                        <dt class="col-sm-4">Amount:</dt>
+                                        <dd class="col-sm-8">
+                                            <strong>
+                                                <t t-esc="booking.amount" t-options="{'widget': 'monetary', 'display_currency': booking.currency_id}"/>
+                                            </strong>
+                                        </dd>
+
+                                        <dt class="col-sm-4">Status:</dt>
+                                        <dd class="col-sm-8">
+                                            <span class="badge bg-success">
+                                                <t t-esc="booking.state.upper()"/>
+                                            </span>
+                                        </dd>
+                                    </dl>
+                                </div>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="text-center mt-4">
+                                <a href="/my/bookings" class="btn btn-primary btn-lg me-2">
+                                    <i class="fa fa-list"/> View All My Bookings
+                                </a>
+                                <a href="/events" class="btn btn-outline-secondary btn-lg">
+                                    <i class="fa fa-search"/> Browse More Events
+                                </a>
+                            </div>
+
+                            <!-- Confirmation Note -->
+                            <div class="alert alert-info mt-4">
+                                <i class="fa fa-info-circle"/>
+                                <strong>What's next?</strong>
+                                A confirmation email has been sent to your registered email address.
+                                You can manage your booking from your account portal.
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- ================================================================== -->
+    <!-- BOOKING ERROR PAGE -->
+    <!-- ================================================================== -->
+    <!--
+    Shows error message when booking fails.
+
+    VARIABLES AVAILABLE:
+    - error_message: String with error description
+    - event: service.event record (optional)
+    -->
+    <template id="booking_error" name="Booking Error">
+        <t t-call="website.layout">
+            <div id="wrap" class="oe_structure">
+                <div class="container py-5">
+                    <div class="row justify-content-center">
+                        <div class="col-md-6">
+
+                            <!-- Error Icon -->
+                            <div class="text-center mb-4">
+                                <i class="fa fa-exclamation-triangle text-warning" style="font-size: 80px;"/>
+                                <h1 class="mt-4">Booking Failed</h1>
+                            </div>
+
+                            <!-- Error Message -->
+                            <div class="alert alert-danger">
+                                <h5>Error:</h5>
+                                <p class="mb-0"><t t-esc="error_message"/></p>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="text-center mt-4">
+                                <t t-if="event">
+                                    <a t-attf-href="/events/#{event.id}" class="btn btn-primary me-2">
+                                        <i class="fa fa-arrow-left"/> Back to Event
+                                    </a>
+                                </t>
+                                <a href="/events" class="btn btn-outline-secondary">
+                                    <i class="fa fa-search"/> Browse All Events
+                                </a>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+</odoo>
