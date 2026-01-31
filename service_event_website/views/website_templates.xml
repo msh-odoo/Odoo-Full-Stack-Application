@@ -442,4 +442,310 @@
         </t>
     </template>
 
+    <!-- ================================================================== -->
+    <!-- PORTAL: MY BOOKINGS LISTING -->
+    <!-- ================================================================== -->
+    <!--
+    Customer portal page showing all user's bookings with pagination.
+    
+    PORTAL TEMPLATE PATTERN:
+    - Inherits portal.portal_layout for portal navigation
+    - Uses portal breadcrumbs
+    - Implements searchbar for filtering/sorting
+    - Includes pagination component
+    
+    VARIABLES:
+    - bookings: service.booking recordset
+    - pager: Pagination dict from portal.pager
+    - searchbar_sortings: Sort options dict
+    - searchbar_filters: Filter options dict
+    - sortby: Current sort key
+    - filterby: Current filter key
+    -->
+    <template id="portal_my_bookings" name="My Bookings">
+        <t t-call="portal.portal_layout">
+            <t t-set="breadcrumbs_searchbar" t-value="True"/>
+            
+            <t t-call="portal.portal_searchbar">
+                <t t-set="title">Bookings</t>
+            </t>
+            
+            <t t-if="not bookings">
+                <div class="alert alert-info">
+                    <p class="mb-0">
+                        <i class="fa fa-info-circle me-2"></i>
+                        You don't have any bookings yet.
+                        <a href="/events" class="alert-link">Browse upcoming events</a>
+                    </p>
+                </div>
+            </t>
+            <t t-else="">
+                <div class="table-responsive">
+                    <table class="table table-hover o_portal_my_doc_table">
+                        <thead>
+                            <tr class="active">
+                                <th>Event</th>
+                                <th>Date</th>
+                                <th>Seats</th>
+                                <th>Status</th>
+                                <th>Total</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr t-foreach="bookings" t-as="booking">
+                                <td>
+                                    <a t-attf-href="/my/booking/#{booking.id}">
+                                        <strong t-field="booking.event_id.name"/>
+                                    </a>
+                                    <br/>
+                                    <small class="text-muted" t-field="booking.event_id.category_id.name"/>
+                                </td>
+                                <td>
+                                    <span t-field="booking.booking_date" t-options='{"widget": "date"}'/>
+                                    <br/>
+                                    <small class="text-muted">
+                                        Event: <span t-field="booking.event_id.start_datetime" t-options='{"widget": "datetime"}'/>
+                                    </small>
+                                </td>
+                                <td>
+                                    <span t-field="booking.seats_reserved"/>
+                                    <t t-if="booking.seats_reserved == 1">seat</t>
+                                    <t t-else="">seats</t>
+                                </td>
+                                <td>
+                                    <span t-attf-class="badge bg-#{
+                                        'primary' if booking.state == 'draft' else
+                                        'success' if booking.state == 'confirmed' else
+                                        'info' if booking.state == 'attended' else
+                                        'secondary'
+                                    }">
+                                        <t t-esc="booking.state.title()"/>
+                                    </span>
+                                </td>
+                                <td>
+                                    <strong>
+                                        <span t-esc="booking.total_amount" t-options='{"widget": "monetary", "display_currency": booking.currency_id}'/>
+                                    </strong>
+                                </td>
+                                <td class="text-center">
+                                    <a t-attf-href="/my/booking/#{booking.id}" class="btn btn-sm btn-primary">
+                                        <i class="fa fa-eye me-1"></i> View
+                                    </a>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination -->
+                <div t-if="pager" class="o_portal_pager text-center">
+                    <t t-call="portal.pager"/>
+                </div>
+            </t>
+        </t>
+    </template>
+
+    <!-- ================================================================== -->
+    <!-- PORTAL: BOOKING DETAIL PAGE -->
+    <!-- ================================================================== -->
+    <!--
+    Detailed view of a single booking.
+    
+    Shows:
+    - Booking information (date, seats, amount)
+    - Event details (name, date, location, description)
+    - Customer information
+    - Booking status and actions
+    
+    SECURITY:
+    - Portal users can only view their own bookings
+    - Record rules enforce access control
+    - Access token support for public sharing
+    -->
+    <template id="portal_my_booking" name="My Booking Detail">
+        <t t-call="portal.portal_layout">
+            <t t-set="o_portal_fullwidth_alert" groups="base.group_user">
+                <t t-call="portal.portal_back_in_edit_mode">
+                    <t t-set="backend_url" t-value="'/web#model=service.booking&amp;id=%s&amp;view_type=form' % (booking.id)"/>
+                </t>
+            </t>
+            
+            <div class="container">
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <!-- Breadcrumb -->
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="/my/home">My Account</a></li>
+                            <li class="breadcrumb-item"><a href="/my/bookings">Bookings</a></li>
+                            <li class="breadcrumb-item active">
+                                <t t-esc="booking.name"/>
+                            </li>
+                        </ol>
+                        
+                        <!-- Page Header -->
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h2>
+                                <i class="fa fa-ticket me-2"></i>
+                                <t t-esc="booking.name"/>
+                            </h2>
+                            <span t-attf-class="badge badge-pill bg-#{
+                                'primary' if booking.state == 'draft' else
+                                'success' if booking.state == 'confirmed' else
+                                'info' if booking.state == 'attended' else
+                                'secondary'
+                            } fs-5 px-3 py-2">
+                                <t t-esc="booking.state.title()"/>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <!-- Booking Information -->
+                    <div class="col-lg-8">
+                        <div class="card mb-4">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">
+                                    <i class="fa fa-calendar-check me-2"></i>
+                                    Event Information
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <h4 class="mb-3">
+                                    <a t-attf-href="/events/#{booking.event_id.id}" target="_blank">
+                                        <t t-esc="booking.event_id.name"/>
+                                    </a>
+                                </h4>
+                                
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <p class="mb-2">
+                                            <i class="fa fa-clock-o me-2 text-muted"></i>
+                                            <strong>Start:</strong>
+                                            <span t-field="booking.event_id.start_datetime" t-options='{"widget": "datetime"}'/>
+                                        </p>
+                                        <p class="mb-2">
+                                            <i class="fa fa-clock-o me-2 text-muted"></i>
+                                            <strong>End:</strong>
+                                            <span t-field="booking.event_id.end_datetime" t-options='{"widget": "datetime"}'/>
+                                        </p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <p class="mb-2">
+                                            <i class="fa fa-tag me-2 text-muted"></i>
+                                            <strong>Category:</strong>
+                                            <span t-field="booking.event_id.category_id.name"/>
+                                        </p>
+                                        <p class="mb-2" t-if="booking.event_id.location">
+                                            <i class="fa fa-map-marker me-2 text-muted"></i>
+                                            <strong>Location:</strong>
+                                            <span t-field="booking.event_id.location"/>
+                                        </p>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3" t-if="booking.event_id.description">
+                                    <strong>Description:</strong>
+                                    <div class="mt-2 text-muted">
+                                        <t t-esc="booking.event_id.description"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Event Description (if longer content) -->
+                        <div class="card mb-4" t-if="booking.event_id.description">
+                            <div class="card-header">
+                                <h5 class="mb-0">
+                                    <i class="fa fa-info-circle me-2"></i>
+                                    About This Event
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <p t-field="booking.event_id.description" class="text-muted"/>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Booking Summary Sidebar -->
+                    <div class="col-lg-4">
+                        <div class="card mb-4">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0">
+                                    <i class="fa fa-file-text me-2"></i>
+                                    Booking Summary
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <dl class="row mb-0">
+                                    <dt class="col-sm-5">Booking #:</dt>
+                                    <dd class="col-sm-7"><t t-esc="booking.name"/></dd>
+                                    
+                                    <dt class="col-sm-5">Booked on:</dt>
+                                    <dd class="col-sm-7">
+                                        <span t-field="booking.booking_date" t-options='{"widget": "date"}'/>
+                                    </dd>
+                                    
+                                    <dt class="col-sm-5">Seats:</dt>
+                                    <dd class="col-sm-7"><t t-esc="booking.seats_reserved"/></dd>
+                                    
+                                    <dt class="col-sm-5">Price/seat:</dt>
+                                    <dd class="col-sm-7">
+                                        <span t-esc="booking.price_unit" t-options='{"widget": "monetary", "display_currency": booking.currency_id}'/>
+                                    </dd>
+                                    
+                                    <dt class="col-sm-5 border-top pt-2"><strong>Total:</strong></dt>
+                                    <dd class="col-sm-7 border-top pt-2">
+                                        <strong class="text-primary fs-5">
+                                            <span t-esc="booking.total_amount" t-options='{"widget": "monetary", "display_currency": booking.currency_id}'/>
+                                        </strong>
+                                    </dd>
+                                </dl>
+                            </div>
+                        </div>
+                        
+                        <!-- Customer Information -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0">
+                                    <i class="fa fa-user me-2"></i>
+                                    Customer Details
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="mb-2">
+                                    <strong><t t-esc="booking.partner_id.name"/></strong>
+                                </p>
+                                <p class="mb-2" t-if="booking.partner_id.email">
+                                    <i class="fa fa-envelope me-2 text-muted"></i>
+                                    <t t-esc="booking.partner_id.email"/>
+                                </p>
+                                <p class="mb-0" t-if="booking.partner_id.phone">
+                                    <i class="fa fa-phone me-2 text-muted"></i>
+                                    <t t-esc="booking.partner_id.phone"/>
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <!-- Actions -->
+                        <div class="card" t-if="booking.state == 'draft'">
+                            <div class="card-body text-center">
+                                <a href="/my/bookings" class="btn btn-secondary btn-block mb-2">
+                                    <i class="fa fa-arrow-left me-2"></i>
+                                    Back to Bookings
+                                </a>
+                                <div class="text-muted small mt-3">
+                                    <i class="fa fa-info-circle me-1"></i>
+                                    This booking is in draft status.
+                                    Contact us to confirm.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
 </odoo>

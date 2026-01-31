@@ -67,8 +67,11 @@
 
     # Data files
     'data': [
+        # Security
+        'security/portal_security.xml',
         # Templates
         'views/website_templates.xml',
+        'views/portal_templates.xml',
     ],
 
     # Assets (JS/CSS)

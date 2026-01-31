@@ -63,7 +63,8 @@ This controller provides 4 main routes:
 
 from odoo import http
 from odoo.http import request
-from odoo.exceptions import ValidationError
+from odoo.exceptions import ValidationError, AccessError, MissingError
+from odoo.tools import consteq
 
 
 # ========================================================================
@@ -354,10 +355,11 @@ class ServiceEventWebsite(http.Controller):
                 raise ValidationError("Event is fully booked")
 
             # Create booking
+            from datetime import datetime
             booking = request.env['service.booking'].create({
                 'event_id': event.id,
                 'partner_id': request.env.user.partner_id.id,
-                'booking_date': http.request.env.context.get('tz') or 'UTC',
+                'booking_date': datetime.now(),
                 'state': 'draft',
             })
 
@@ -371,17 +373,13 @@ class ServiceEventWebsite(http.Controller):
             # Show error message to user
             return request.render('service_event_website.booking_error', {
                 'error_message': str(e),
-                'event': event,
+                'event': event if event.exists() else None,
             })
         except Exception as e:
-            # Log unexpected errors
-            request.env['ir.logging'].sudo().create({
-                'name': 'Booking Error',
-                'type': 'server',
-                'level': 'error',
-                'message': str(e),
-                'path': 'service_event_website.controllers.main',
-            })
+            # Log unexpected errors using Python logging
+            import logging
+            _logger = logging.getLogger(__name__)
+            _logger.error('Booking error: %s', e, exc_info=True)
 
             return request.render('service_event_website.booking_error', {
                 'error_message': 'An unexpected error occurred. Please try again.',
@@ -941,3 +939,221 @@ class ServiceEventAPI(http.Controller):
     #     Access-Control-Allow-Methods: POST, GET, OPTIONS
     #     Access-Control-Allow-Headers: Content-Type
     # ========================================================================
+
+
+# ============================================================================
+# PORTAL CONTROLLER - Customer Self-Service
+# ============================================================================
+class PortalBooking(http.Controller):
+    """
+    Customer Portal Controller for Service Event Bookings
+    
+    PORTAL PATTERN:
+    ===============
+    Odoo's portal module provides customer self-service features.
+    Portal users can view and manage their own records.
+    
+    KEY CONCEPTS:
+    -------------
+    1. AUTHENTICATION:
+       - auth='user': Requires login (portal or internal user)
+       - Portal users have limited access (only their records)
+       - Internal users have full access
+    
+    2. ACCESS CONTROL:
+       - Record rules restrict portal users to their own records
+       - Sudo() needed carefully to access related records
+       - Always check ownership before allowing actions
+    
+    3. PAGINATION:
+       - Use portal.pager utility for consistent pagination
+       - Standard pattern: /my/records/page/2
+       - Support sorting and filtering
+    
+    4. URL PATTERNS:
+       - /my/bookings - List view
+       - /my/booking/<id> - Detail view
+       - Follows Odoo portal conventions
+    
+    SECURITY NOTES:
+    ---------------
+    - Never use sudo() without checking record ownership
+    - Validate all user inputs
+    - Use record rules, not just controller checks
+    - Portal users can only access published events
+    """
+    
+    def _prepare_portal_layout_values(self):
+        """Add booking count to portal home counters"""
+        values = {}
+        BookingModel = request.env['service.booking']
+        booking_count = BookingModel.search_count([])
+        values['booking_count'] = booking_count
+        return values
+    
+    @http.route(['/my/bookings', '/my/bookings/page/<int:page>'], type='http', auth='user', website=True)
+    def portal_my_bookings(self, page=1, date_begin=None, date_end=None, sortby=None, filterby=None, **kw):
+        """
+        Customer's booking listing page with pagination and filters
+        
+        ROUTE PATTERN:
+        -------------
+        /my/bookings          - First page
+        /my/bookings/page/2   - Page 2
+        
+        PARAMETERS:
+        -----------
+        - page: Page number (default 1)
+        - date_begin: Filter bookings after this date
+        - date_end: Filter bookings before this date
+        - sortby: Sort order (date, name, state)
+        - filterby: Filter by status (all, draft, confirmed, attended, cancelled)
+        
+        PAGINATION:
+        -----------
+        - 10 bookings per page
+        - Uses portal.pager utility
+        - SEO-friendly URLs
+        
+        SORTING OPTIONS:
+        ---------------
+        - date: Booking date (newest first)
+        - name: Event name (A-Z)
+        - state: Status (confirmed first)
+        
+        FILTERING OPTIONS:
+        -----------------
+        - all: All bookings
+        - draft: Draft bookings
+        - confirmed: Confirmed bookings
+        - attended: Attended events
+        - cancelled: Cancelled bookings
+        """
+        BookingModel = request.env['service.booking']
+        
+        # Sorting options
+        searchbar_sortings = {
+            'date': {'label': 'Newest', 'order': 'booking_date desc'},
+            'name': {'label': 'Event Name', 'order': 'event_id'},
+            'state': {'label': 'Status', 'order': 'state'},
+        }
+        
+        # Filter options
+        searchbar_filters = {
+            'all': {'label': 'All', 'domain': []},
+            'draft': {'label': 'Draft', 'domain': [('state', '=', 'draft')]},
+            'confirmed': {'label': 'Confirmed', 'domain': [('state', '=', 'confirmed')]},
+            'attended': {'label': 'Attended', 'domain': [('state', '=', 'attended')]},
+            'cancelled': {'label': 'Cancelled', 'domain': [('state', '=', 'cancelled')]},
+        }
+        
+        # Default sort and filter
+        if not sortby:
+            sortby = 'date'
+        order = searchbar_sortings[sortby]['order']
+        
+        if not filterby:
+            filterby = 'all'
+        domain = searchbar_filters[filterby]['domain']
+        
+        # Date range filter
+        if date_begin and date_end:
+            domain += [('booking_date', '>=', date_begin), ('booking_date', '<=', date_end)]
+        
+        # Count bookings for pagination
+        booking_count = BookingModel.search_count(domain)
+        
+        # Pagination
+        from odoo.addons.portal.controllers.portal import pager as portal_pager
+        pager = portal_pager(
+            url='/my/bookings',
+            total=booking_count,
+            page=page,
+            step=10,  # 10 bookings per page
+            url_args={'date_begin': date_begin, 'date_end': date_end, 'sortby': sortby, 'filterby': filterby},
+        )
+        
+        # Fetch bookings
+        bookings = BookingModel.search(domain, order=order, limit=10, offset=pager['offset'])
+        
+        values = {
+            'bookings': bookings,
+            'page_name': 'booking',
+            'pager': pager,
+            'default_url': '/my/bookings',
+            'searchbar_sortings': searchbar_sortings,
+            'searchbar_filters': searchbar_filters,
+            'sortby': sortby,
+            'filterby': filterby,
+            'date_begin': date_begin,
+            'date_end': date_end,
+        }
+        return request.render('service_event_website.portal_my_bookings', values)
+    
+    @http.route(['/my/booking/<int:booking_id>'], type='http', auth='user', website=True)
+    def portal_my_booking(self, booking_id, access_token=None, **kw):
+        """
+        Booking detail page - shows full booking information
+        
+        ROUTE PATTERN:
+        -------------
+        /my/booking/1  - Booking ID 1
+        
+        SECURITY:
+        ---------
+        - Portal users can only view their own bookings
+        - Access token support for sharing (optional)
+        - Record rules handle access control
+        
+        FEATURES:
+        ---------
+        - View booking details
+        - View event information
+        - Download booking confirmation (future)
+        - Cancel booking (if allowed)
+        
+        ACCESS TOKEN:
+        ------------
+        Optional parameter for sharing booking details
+        without login (e.g., email links)
+        """
+        try:
+            booking_sudo = self._document_check_access('service.booking', booking_id, access_token)
+        except (AccessError, MissingError):
+            return request.redirect('/my')
+        
+        # Get related records
+        event = booking_sudo.event_id
+        
+        values = {
+            'booking': booking_sudo,
+            'event': event,
+            'page_name': 'booking',
+        }
+        return request.render('service_event_website.portal_my_booking', values)
+    
+    def _document_check_access(self, model_name, document_id, access_token=None):
+        """
+        Check if current user can access document
+        
+        SECURITY PATTERN:
+        ----------------
+        1. Try to access with current user (portal rules apply)
+        2. If access_token provided, verify and grant access
+        3. Raise AccessError if not allowed
+        
+        This prevents users from accessing other users' records
+        """
+        document = request.env[model_name].browse([document_id])
+        document_sudo = document.sudo()
+        
+        # Check if user has access (portal record rules)
+        try:
+            document.check_access_rights('read')
+            document.check_access_rule('read')
+        except AccessError:
+            # If no access token, deny access
+            if not access_token or not document_sudo.access_token or not consteq(document_sudo.access_token, access_token):
+                raise
+        
+        return document_sudo
