@@ -509,3 +509,435 @@ class ServiceEventWebsite(http.Controller):
 #         </url>
 #     </urlset>
 # ========================================================================
+
+
+# ############################################################################
+# JSON API CONTROLLERS
+# ############################################################################
+
+class ServiceEventAPI(http.Controller):
+    """
+    JSON API endpoints for dynamic event data.
+
+    Provides RESTful JSON endpoints for:
+    - Fetching event pricing
+    - Checking availability
+    - Validating booking data
+
+    All endpoints return standardized JSON responses.
+    """
+
+    # ========================================================================
+    # JSON RESPONSE HELPERS
+    # ========================================================================
+
+    def _json_response(self, success=True, data=None, error=None, message=None):
+        """
+        Create standardized JSON response structure.
+
+        STANDARD FORMAT:
+            {
+                "success": true/false,
+                "data": {...},           // On success
+                "error": "error_code",   // On failure
+                "message": "Human-readable message"
+            }
+
+        WHY STANDARDIZED FORMAT:
+            - Consistent API for frontend developers
+            - Easy error handling on client side
+            - Clear success/failure indication
+            - Machine-readable errors + human messages
+
+        USAGE:
+            return self._json_response(success=True, data={'price': 99.99})
+            return self._json_response(success=False, error='not_found', message='Event not found')
+        """
+        response = {
+            'success': success,
+        }
+
+        if success:
+            response['data'] = data or {}
+            if message:
+                response['message'] = message
+        else:
+            response['error'] = error or 'unknown_error'
+            response['message'] = message or 'An error occurred'
+
+        return response
+
+    # ========================================================================
+    # FETCH EVENT PRICE (JSON-RPC)
+    # ========================================================================
+
+    @http.route('/api/event/price', type='jsonrpc', auth='public', methods=['POST'], cors='*')
+    def get_event_price(self, event_id, quantity=1, **kwargs):
+        """
+        Fetch event pricing with quantity calculation.
+
+        ROUTE ATTRIBUTES:
+            - type='json': JSON-RPC endpoint (not regular HTTP)
+            - auth='public': No login required
+            - methods=['POST']: POST only (JSON-RPC always POST)
+            - cors='*': Allow cross-origin requests from any domain
+
+        JSON-RPC vs HTTP:
+            - HTTP: Returns HTML/text, uses query params
+            - JSON-RPC: Returns JSON, uses request body
+            - JSON-RPC: Automatic JSON parsing
+            - JSON-RPC: No need for request.jsonrequest
+
+        REQUEST BODY:
+            {
+                "jsonrpc": "2.0",
+                "method": "call",
+                "params": {
+                    "event_id": 5,
+                    "quantity": 2
+                }
+            }
+
+        RESPONSE:
+            {
+                "jsonrpc": "2.0",
+                "result": {
+                    "success": true,
+                    "data": {
+                        "event_id": 5,
+                        "event_name": "Python Workshop",
+                        "price_unit": 299.99,
+                        "quantity": 2,
+                        "subtotal": 599.98,
+                        "currency": "USD"
+                    }
+                }
+            }
+
+        CORS EXPLAINED:
+            - cors='*': Allows requests from any domain
+            - cors='https://example.com': Only from specific domain
+            - cors=None: Same-origin only (default)
+            - Needed for external apps/websites to call API
+        """
+        try:
+            # Validate input
+            if not event_id:
+                return self._json_response(
+                    success=False,
+                    error='missing_event_id',
+                    message='Event ID is required'
+                )
+
+            # Get event
+            event = request.env['service.event'].sudo().browse(int(event_id))
+
+            if not event.exists():
+                return self._json_response(
+                    success=False,
+                    error='event_not_found',
+                    message=f'Event with ID {event_id} not found'
+                )
+
+            # Check if published
+            if event.state != 'published':
+                return self._json_response(
+                    success=False,
+                    error='event_not_available',
+                    message='Event is not available for booking'
+                )
+
+            # Calculate pricing
+            quantity = int(quantity) if quantity else 1
+            price_unit = event.final_price  # Uses early bird pricing if applicable
+            subtotal = price_unit * quantity
+
+            # Return pricing data
+            return self._json_response(
+                success=True,
+                data={
+                    'event_id': event.id,
+                    'event_name': event.name,
+                    'price_unit': price_unit,
+                    'early_bird_price': event.early_bird_price,
+                    'regular_price': event.price_unit,
+                    'quantity': quantity,
+                    'subtotal': subtotal,
+                    'currency': event.currency_id.name,
+                    'currency_symbol': event.currency_id.symbol,
+                }
+            )
+
+        except ValueError as e:
+            return self._json_response(
+                success=False,
+                error='invalid_input',
+                message=f'Invalid input: {str(e)}'
+            )
+        except Exception as e:
+            return self._json_response(
+                success=False,
+                error='server_error',
+                message='An unexpected error occurred'
+            )
+
+    # ========================================================================
+    # JSON-RPC EXPLANATION
+    # ========================================================================
+    #
+    # WHAT IS JSON-RPC?
+    #     - Remote Procedure Call protocol using JSON
+    #     - Client sends function call as JSON
+    #     - Server executes function, returns result as JSON
+    #     - Standard protocol (version 2.0)
+    #
+    # WHY type='json' not type='http'?
+    #     - Automatic JSON parsing (no manual json.loads())
+    #     - Parameters passed directly to function
+    #     - Return value auto-converted to JSON
+    #     - Cleaner API design
+    #
+    # HOW TO CALL FROM JAVASCRIPT:
+    #     fetch('/api/event/price', {
+    #         method: 'POST',
+    #         headers: {'Content-Type': 'application/json'},
+    #         body: JSON.stringify({
+    #             jsonrpc: '2.0',
+    #             method: 'call',
+    #             params: {event_id: 5, quantity: 2}
+    #         })
+    #     })
+    #
+    # HOW TO CALL FROM PYTHON:
+    #     import requests
+    #     response = requests.post('http://localhost:8069/api/event/price', json={
+    #         'jsonrpc': '2.0',
+    #         'method': 'call',
+    #         'params': {'event_id': 5, 'quantity': 2}
+    #     })
+    #
+    # AUTHENTICATION:
+    #     - auth='public': No session/token needed
+    #     - auth='user': Session cookie required
+    #     - Can also use API keys (custom implementation)
+    # ========================================================================
+
+    # ========================================================================
+    # CHECK AVAILABILITY (JSON)
+    # ========================================================================
+
+    @http.route('/api/event/availability', type='jsonrpc', auth='public', methods=['POST'], cors='*')
+    def check_availability(self, event_id, quantity=1, **kwargs):
+        """
+        Check real-time seat availability for an event.
+
+        USE CASE:
+            - Frontend shows "X seats left" dynamically
+            - Validate before submitting booking form
+            - Prevent overbooking
+
+        REQUEST:
+            POST /api/event/availability
+            {
+                "jsonrpc": "2.0",
+                "params": {
+                    "event_id": 5,
+                    "quantity": 2
+                }
+            }
+
+        RESPONSE:
+            {
+                "success": true,
+                "data": {
+                    "available": true,
+                    "capacity": 50,
+                    "booked": 30,
+                    "available_seats": 20,
+                    "requested_quantity": 2,
+                    "can_book": true,
+                    "registration_open": true
+                }
+            }
+        """
+        try:
+            # Get event
+            event = request.env['service.event'].sudo().browse(int(event_id))
+
+            if not event.exists():
+                return self._json_response(
+                    success=False,
+                    error='event_not_found',
+                    message='Event not found'
+                )
+
+            # Check registration status
+            registration_open = event.registration_open
+
+            # Calculate availability
+            quantity = int(quantity) if quantity else 1
+            unlimited_capacity = event.capacity == 0
+            available_seats = event.available_seats if not unlimited_capacity else 999999
+            can_book = (unlimited_capacity or available_seats >= quantity) and registration_open
+
+            # Return availability data
+            return self._json_response(
+                success=True,
+                data={
+                    'event_id': event.id,
+                    'event_name': event.name,
+                    'available': registration_open,
+                    'capacity': event.capacity,
+                    'booked': event.booking_count_confirmed,
+                    'available_seats': available_seats if not unlimited_capacity else None,
+                    'unlimited_capacity': unlimited_capacity,
+                    'requested_quantity': quantity,
+                    'can_book': can_book,
+                    'registration_open': registration_open,
+                    'fill_rate': event.fill_rate,
+                    'start_datetime': event.start_datetime.isoformat() if event.start_datetime else None,
+                }
+            )
+
+        except Exception as e:
+            return self._json_response(
+                success=False,
+                error='server_error',
+                message=str(e)
+            )
+
+    # ========================================================================
+    # VALIDATE BOOKING DATA (JSON)
+    # ========================================================================
+
+    @http.route('/api/event/validate', type='jsonrpc', auth='public', methods=['POST'], cors='*')
+    def validate_booking(self, event_id, partner_data=None, **kwargs):
+        """
+        Validate booking data before submission.
+
+        USE CASE:
+            - Frontend validation before form submit
+            - Check all requirements met
+            - Provide helpful error messages
+
+        VALIDATES:
+            - Event exists and is published
+            - Seats available
+            - Partner data complete (if provided)
+            - Registration still open
+
+        REQUEST:
+            {
+                "event_id": 5,
+                "partner_data": {
+                    "name": "John Doe",
+                    "email": "john@example.com"
+                }
+            }
+
+        RESPONSE:
+            {
+                "success": true,
+                "data": {
+                    "valid": true,
+                    "errors": [],
+                    "warnings": ["Only 2 seats remaining"]
+                }
+            }
+        """
+        try:
+            errors = []
+            warnings = []
+
+            # Validate event
+            event = request.env['service.event'].sudo().browse(int(event_id))
+
+            if not event.exists():
+                errors.append('Event not found')
+                return self._json_response(
+                    success=True,  # Validation completed
+                    data={'valid': False, 'errors': errors, 'warnings': warnings}
+                )
+
+            # Check published
+            if event.state != 'published':
+                errors.append('Event is not available for booking')
+
+            # Check registration open
+            if not event.registration_open:
+                errors.append('Registration is closed for this event')
+
+            # Check availability
+            if event.capacity > 0:
+                if event.available_seats <= 0:
+                    errors.append('Event is fully booked')
+                elif event.available_seats <= 5:
+                    warnings.append(f'Only {event.available_seats} seats remaining')
+
+            # Validate partner data if provided
+            if partner_data:
+                if not partner_data.get('name'):
+                    errors.append('Name is required')
+                if not partner_data.get('email'):
+                    errors.append('Email is required')
+                elif '@' not in partner_data.get('email', ''):
+                    errors.append('Invalid email format')
+
+            # Return validation result
+            return self._json_response(
+                success=True,
+                data={
+                    'valid': len(errors) == 0,
+                    'errors': errors,
+                    'warnings': warnings,
+                    'event_name': event.name,
+                    'event_date': event.start_datetime.isoformat() if event.start_datetime else None,
+                }
+            )
+
+        except Exception as e:
+            return self._json_response(
+                success=False,
+                error='validation_error',
+                message=str(e)
+            )
+
+    # ========================================================================
+    # CORS EXPLANATION
+    # ========================================================================
+    #
+    # WHAT IS CORS?
+    #     - Cross-Origin Resource Sharing
+    #     - Browser security feature
+    #     - Prevents malicious websites from stealing data
+    #     - Controls which domains can access your API
+    #
+    # WHY cors='*'?
+    #     - Allows API calls from ANY domain
+    #     - Useful for public APIs
+    #     - Mobile apps, external websites can use API
+    #     - WARNING: Less secure for sensitive operations
+    #
+    # CORS SECURITY LEVELS:
+    #     cors='*'                    → Allow all domains
+    #     cors='https://example.com'  → Only this domain
+    #     cors=None                   → Same origin only (default)
+    #
+    # WHEN TO USE cors='*':
+    #     ✓ Public read-only APIs
+    #     ✓ Event listing, pricing info
+    #     ✗ User authentication
+    #     ✗ Payment processing
+    #     ✗ Sensitive data access
+    #
+    # HOW CORS WORKS:
+    #     1. Browser sends OPTIONS request (preflight)
+    #     2. Server responds with allowed origins
+    #     3. Browser allows/blocks actual request
+    #     4. Response includes Access-Control-Allow-Origin header
+    #
+    # HEADERS ADDED BY cors='*':
+    #     Access-Control-Allow-Origin: *
+    #     Access-Control-Allow-Methods: POST, GET, OPTIONS
+    #     Access-Control-Allow-Headers: Content-Type
+    # ========================================================================
