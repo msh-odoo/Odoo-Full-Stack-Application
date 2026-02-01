@@ -1,0 +1,401 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Service Event Views
+
+PURPOSE:
+    Define user interface views for service.event model.
+
+ODOO VIEW TYPES:
+    - tree: List view (table) removed since v18 now called list
+    - form: Detail view (single record)
+    - kanban: Card view (drag-drop)
+    - search: Filters and groupby
+    - graph: Charts and analytics
+    - pivot: Pivot table
+    - calendar: Calendar view
+    - gantt: Gantt chart
+
+VIEW INHERITANCE:
+    Odoo uses view inheritance to modify existing views.
+    - Primary views: Define complete structure
+    - Inherited views: Modify existing views with xpath
+
+COMMIT 2 SCOPE:
+    Basic tree(now its list) and form views for testing models.
+-->
+<odoo>
+    <data>
+
+        <!-- Service Event List View -->
+        <record id="view_service_event_list" model="ir.ui.view">
+            <field name="name">service.event.list</field>
+            <field name="model">service.event</field>
+            <field name="arch" type="xml">
+                <list string="Service Events">
+                    <field name="name"/>
+                    <field name="state" widget="badge"
+                           decoration-info="state=='draft'"
+                           decoration-success="state=='published'"
+                           decoration-warning="state=='registration_closed'"
+                           decoration-muted="state in ('completed', 'cancelled')"/>
+                    <field name="category_id"/>
+                    <field name="price_unit" optional="show"/>
+                    <field name="final_price" optional="show" widget="monetary"/>
+                    <field name="currency_id" optional="hide"/>
+                    <field name="capacity" optional="show"/>
+                    <field name="booking_count" optional="show"/>
+                    <field name="booking_count_confirmed" optional="show"/>
+                    <field name="available_seats" optional="show"/>
+                    <field name="fill_rate" optional="hide" widget="progressbar"/>
+                    <field name="total_revenue" optional="hide" widget="monetary"/>
+                    <field name="registration_open" optional="hide" widget="boolean_toggle"/>
+                    <field name="company_id" optional="hide"/>
+                </list>
+            </field>
+        </record>
+
+        <!-- Service Event Kanban View -->
+        <record id="view_service_event_kanban" model="ir.ui.view">
+            <field name="name">service.event.kanban</field>
+            <field name="model">service.event</field>
+            <field name="arch" type="xml">
+                <kanban default_group_by="state" class="o_kanban_small_column" on_create="quick_create" quick_create_view="service_event_base.view_service_event_form">
+                    <field name="id"/>
+                    <field name="name"/>
+                    <field name="state"/>
+                    <field name="category_id"/>
+                    <field name="price_unit"/>
+                    <field name="final_price"/>
+                    <field name="currency_id"/>
+                    <field name="capacity"/>
+                    <field name="booking_count"/>
+                    <field name="booking_count_confirmed"/>
+                    <field name="available_seats"/>
+                    <field name="fill_rate"/>
+                    <field name="total_revenue"/>
+                    <field name="start_datetime"/>
+                    <field name="end_datetime"/>
+                    <field name="registration_open"/>
+                    <field name="color"/>
+
+                    <templates>
+                        <t t-name="card" class="d-flex flex-column">
+                            <!-- Card Header with State Badge -->
+                            <div class="o_kanban_card_header">
+                                <div class="o_kanban_card_header_title">
+                                    <div class="o_kanban_primary_top">
+                                        <span class="fw-bold">
+                                            <field name="name"/>
+                                        </span>
+                                    </div>
+                                    <div class="o_kanban_primary_bottom">
+                                        <field name="category_id"/>
+                                    </div>
+                                </div>
+                                <div class="o_kanban_card_header_ribbon">
+                                    <field name="state" widget="state_selection">
+                                        <span class="badge rounded-pill"
+                                              t-attf-class="badge-{{state == 'draft' ? 'secondary' : state == 'published' ? 'primary' : state == 'registration_closed' ? 'warning' : state == 'completed' ? 'success' : 'danger'}}">
+                                            <t t-esc="state"/>
+                                        </span>
+                                    </field>
+                                </div>
+                            </div>
+
+                            <!-- Card Body -->
+                            <div class="o_kanban_card_content">
+                                <!-- Event Dates -->
+                                <div class="row mb-2">
+                                    <div class="col-12">
+                                        <i class="fa fa-calendar me-1" title="Event Date"/>
+                                        <field name="start_datetime" widget="date"/>
+                                        <t t-if="record.end_datetime.raw_value">
+                                            → <field name="end_datetime" widget="date"/>
+                                        </t>
+                                    </div>
+                                </div>
+
+                                <!-- Pricing Info -->
+                                <div class="row mb-2">
+                                    <div class="col-6">
+                                        <i class="fa fa-money me-1" title="Price"/>
+                                        <field name="final_price" widget="monetary"/>
+                                    </div>
+                                    <div class="col-6 text-end">
+                                        <i class="fa fa-users me-1" title="Capacity"/>
+                                        <t t-if="record.capacity.raw_value > 0">
+                                            <field name="booking_count_confirmed"/>/<field name="capacity"/>
+                                        </t>
+                                        <t t-else="">
+                                            <field name="booking_count_confirmed"/> (Unlimited)
+                                        </t>
+                                    </div>
+                                </div>
+
+                                <!-- Fill Rate Progress Bar -->
+                                <t t-if="record.capacity.raw_value > 0">
+                                    <div class="row mb-2">
+                                        <div class="col-12">
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar"
+                                                     role="progressbar"
+                                                     t-attf-style="width: {{record.fill_rate.raw_value}}%"
+                                                     t-attf-class="progress-bar {{record.fill_rate.raw_value >= 100 ? 'bg-danger' : record.fill_rate.raw_value >= 80 ? 'bg-warning' : 'bg-success'}}">
+                                                    <field name="fill_rate" widget="percentage"/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </t>
+
+                                <!-- Revenue & Status -->
+                                <div class="row">
+                                    <div class="col-6">
+                                        <small class="text-muted">Revenue:</small><br/>
+                                        <strong><field name="total_revenue" widget="monetary"/></strong>
+                                    </div>
+                                    <div class="col-6 text-end">
+                                        <t t-if="record.registration_open.raw_value">
+                                            <span class="badge badge-success"><i class="fa fa-check-circle"/> Open</span>
+                                        </t>
+                                        <t t-else="">
+                                            <span class="badge badge-secondary"><i class="fa fa-times-circle"/> Closed</span>
+                                        </t>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Card Footer with Tags -->
+                            <div class="o_kanban_card_footer mt-auto">
+                                <div class="o_kanban_tags">
+                                    <field name="tag_ids" widget="many2many_tags" options="{'color_field': 'color'}"/>
+                                </div>
+                            </div>
+                        </t>
+                    </templates>
+                </kanban>
+            </field>
+        </record>
+
+        <!-- Service Event Calendar View -->
+        <record id="view_service_event_calendar" model="ir.ui.view">
+            <field name="name">service.event.calendar</field>
+            <field name="model">service.event</field>
+            <field name="arch" type="xml">
+                <calendar string="Event Calendar"
+                          date_start="start_datetime"
+                          date_stop="end_datetime"
+                          mode="month"
+                          color="state"
+                          quick_create="1"
+                          event_open_popup="1">
+                    <field name="name"/>
+                    <field name="category_id"/>
+                    <field name="state" filters="1" invisible="1"/>
+                    <field name="booking_count"/>
+                    <field name="capacity"/>
+                    <field name="fill_rate"/>
+                </calendar>
+            </field>
+        </record>
+
+        <!-- Service Event Graph View (Analytics) -->
+        <record id="view_service_event_graph" model="ir.ui.view">
+            <field name="name">service.event.graph</field>
+            <field name="model">service.event</field>
+            <field name="arch" type="xml">
+                <graph string="Event Analysis" type="bar" sample="1">
+                    <field name="category_id" type="row"/>
+                    <field name="booking_count_confirmed" type="measure"/>
+                    <field name="total_revenue" type="measure"/>
+                    <field name="capacity" type="measure"/>
+                </graph>
+            </field>
+        </record>
+
+        <!-- Service Event Pivot View (Analytics) -->
+        <record id="view_service_event_pivot" model="ir.ui.view">
+            <field name="name">service.event.pivot</field>
+            <field name="model">service.event</field>
+            <field name="arch" type="xml">
+                <pivot string="Event Pivot Analysis" sample="1">
+                    <field name="category_id" type="row"/>
+                    <field name="state" type="col"/>
+                    <field name="booking_count_confirmed" type="measure"/>
+                    <field name="total_revenue" type="measure"/>
+                    <field name="fill_rate" type="measure"/>
+                </pivot>
+            </field>
+        </record>
+
+        <!-- Enhanced Search View with Search Panels and Filters -->
+        <record id="view_service_event_search" model="ir.ui.view">
+            <field name="name">service.event.search</field>
+            <field name="model">service.event</field>
+            <field name="arch" type="xml">
+                <search string="Search Events">
+                    <!-- Search Fields -->
+                    <field name="name" string="Event" filter_domain="[('name', 'ilike', self)]"/>
+                    <field name="category_id"/>
+                    <field name="tag_ids" string="Tags"/>
+
+                    <!-- Predefined Filters -->
+                    <filter string="Draft" name="filter_draft" domain="[('state', '=', 'draft')]"/>
+                    <filter string="Published" name="filter_published" domain="[('state', '=', 'published')]"/>
+                    <separator/>
+                    <filter string="Upcoming Events" name="filter_upcoming"
+                            domain="[('start_datetime', '&gt;=', 'now')]"/>
+                    <filter string="Past Events" name="filter_past"
+                            domain="[('end_datetime', '&lt;', 'now')]"/>
+                    <separator/>
+                    <filter string="Has Capacity" name="filter_has_capacity"
+                            domain="['|', ('capacity', '=', 0), ('booking_count_confirmed', '&lt;', 'capacity')]"/>
+                    <separator/>
+                    <filter string="Archived" name="filter_archived" domain="[('active', '=', False)]"/>
+
+                    <!-- Group By -->
+                    <group>
+                        <filter string="Category" name="group_category" context="{'group_by': 'category_id'}"/>
+                        <filter string="State" name="group_state" context="{'group_by': 'state'}"/>
+                        <separator/>
+                        <filter string="Start Date" name="group_start_date" context="{'group_by': 'start_datetime:month'}"/>
+                        <filter string="Company" name="group_company" context="{'group_by': 'company_id'}"/>
+                    </group>
+
+                    <!-- Search Panel (Sidebar Filters) -->
+                    <searchpanel>
+                        <field name="category_id" icon="fa-folder" enable_counters="1"/>
+                        <field name="state" icon="fa-filter" enable_counters="1" select="multi"/>
+                    </searchpanel>
+                </search>
+            </field>
+        </record>
+
+        <!-- Service Event Form View -->
+        <record id="view_service_event_form" model="ir.ui.view">
+            <field name="name">service.event.form</field>
+            <field name="model">service.event</field>
+            <field name="arch" type="xml">
+                <form string="Service Event">
+                    <header>
+                        <button name="action_publish" string="Publish" type="object"
+                                class="oe_highlight" invisible="state != 'draft'"
+                                groups="service_event_base.group_service_event_manager"/>
+                        <button name="action_close_registration" string="Close Registration" type="object"
+                                invisible="state != 'published'"
+                                groups="service_event_base.group_service_event_manager"/>
+                        <button name="action_mark_completed" string="Mark Completed" type="object"
+                                invisible="state not in ('published', 'registration_closed')"
+                                groups="service_event_base.group_service_event_manager"/>
+                        <button name="action_cancel_event" string="Cancel Event" type="object"
+                                invisible="state in ('completed', 'cancelled')"
+                                confirm="This will cancel all bookings. Are you sure?"
+                                groups="service_event_base.group_service_event_manager"/>
+                        <button name="action_reset_to_draft" string="Reset to Draft" type="object"
+                                invisible="state not in ('cancelled', 'completed')"
+                                groups="service_event_base.group_service_event_manager"/>
+                        <field name="state" widget="statusbar"
+                               statusbar_visible="draft,published,registration_closed,completed"/>
+                    </header>
+                    <sheet>
+                        <div class="oe_button_box" name="button_box">
+                            <button class="oe_stat_button" type="object" name="action_view_bookings" icon="fa-ticket">
+                                <field string="Bookings" name="booking_count" widget="statinfo"/>
+                            </button>
+                        </div>
+                        <group>
+                            <group>
+                                <field name="name"/>
+                                <field name="category_id"/>
+                                <field name="tag_ids" widget="many2many_tags" options="{'color_field': 'color'}"/>
+                                <field name="registration_open" widget="boolean_toggle"/>
+                            </group>
+                            <group>
+                                <field name="company_id" options="{'no_create': True}"/>
+                            </group>
+                        </group>
+                        <group string="Pricing" name="pricing_group" groups="service_event_base.group_service_event_manager">
+                            <group>
+                                <field name="price_unit"/>
+                                <field name="early_bird_price"/>
+                                <field name="early_bird_deadline"/>
+                            </group>
+                            <group>
+                                <field name="discount_percentage"/>
+                                <field name="final_price" widget="monetary" readonly="1"/>
+                                <field name="currency_id" options="{'no_create': True}"/>
+                            </group>
+                        </group>
+                        <group string="Capacity &amp; Availability" name="capacity_group">
+                            <group>
+                                <field name="capacity" help="Maximum attendees (0 = unlimited)"/>
+                                <field name="booking_count" readonly="1"/>
+                                <field name="booking_count_confirmed" readonly="1"/>
+                            </group>
+                            <group>
+                                <field name="available_seats" readonly="1"/>
+                                <field name="total_revenue" readonly="1" widget="monetary"/>
+                            </group>
+                        </group>
+                        <group string="Schedule" name="schedule_group">
+                            <group>
+                                <field name="start_datetime"/>
+                                <field name="end_datetime"/>
+                            </group>
+                            <group>
+                                <field name="duration" help="Event duration in hours"/>
+                            </group>
+                        </group>
+                        <group string="Business Metrics" name="metrics_group" groups="service_event_base.group_service_event_manager">
+                            <group>
+                                <field name="fill_rate" widget="percentage"/>
+                                <field name="revenue_per_seat" widget="monetary"/>
+                            </group>
+                            <group>
+                                <field name="cancellation_rate" widget="percentage"/>
+                            </group>
+                        </group>
+                        <notebook>
+                            <page string="Description">
+                                <field name="description" placeholder="Enter event description here..."/>
+                            </page>
+                            <page string="Bookings">
+                                <field name="booking_ids">
+                                    <list>
+                                        <field name="booking_number"/>
+                                        <field name="partner_id"/>
+                                        <field name="booking_date"/>
+                                        <field name="state"/>
+                                        <field name="amount"/>
+                                    </list>
+                                </field>
+                            </page>
+                        </notebook>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- Service Event Action -->
+        <record id="action_service_event" model="ir.actions.act_window">
+            <field name="name">Service Events</field>
+            <field name="res_model">service.event</field>
+            <field name="view_mode">kanban,list,calendar,form,graph,pivot</field>
+            <field name="search_view_id" ref="view_service_event_search"/>
+            <field name="context">{
+                'search_default_filter_upcoming': 1,
+            }</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Create your first service event
+                </p>
+                <p>
+                    Events can be workshops, conferences, webinars, or consulting sessions.<br/>
+                    Track bookings, manage capacity, and monitor revenue all in one place.
+                </p>
+            </field>
+        </record>
+
+    </data>
+</odoo>
+

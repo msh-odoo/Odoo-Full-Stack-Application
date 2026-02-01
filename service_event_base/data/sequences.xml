@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Sequence Configuration
+
+PURPOSE:
+    Define auto-numbering sequences for booking reference numbers.
+
+WHAT IS ir.sequence:
+    Odoo's built-in sequence generator for unique identifiers.
+    Commonly used for: invoices, orders, bookings, tickets, etc.
+
+HOW IT WORKS:
+    1. Sequence is created with prefix, padding, increment
+    2. Model calls sequence.next_by_code('code') in create()
+    3. Sequence returns next number (e.g., "BOOK/2026/0001")
+    4. Number is assigned to record
+
+WHY USE SEQUENCES:
+    - Guaranteed unique numbers (database-level)
+    - Human-readable references
+    - Configurable format (prefix, year, padding)
+    - Thread-safe (no race conditions)
+    - Can be reset annually/monthly
+
+WHY NOT AUTO-INCREMENT ID:
+    - IDs expose record count (security concern)
+    - IDs have gaps (deleted records)
+    - IDs not human-friendly
+    - IDs not configurable per company
+
+SEQUENCE ATTRIBUTES:
+    - code: Technical identifier (used in Python code)
+    - name: Human-readable description
+    - prefix: Static text before number (e.g., "BOOK/")
+    - suffix: Static text after number (rarely used)
+    - padding: Minimum digit count (3 = 001, 002, ...)
+    - number_next: Starting number
+    - number_increment: Step size (usually 1)
+    - implementation: 'standard' (database) or 'no_gap' (slower but guaranteed)
+
+THIS FILE WILL BE USED IN COMMIT 2 (create() override).
+-->
+<odoo>
+    <data noupdate="1">
+        <!--
+        noupdate="1" because:
+            - Users may customize sequence format
+            - Preserves current number on upgrade
+            - Only created on first install
+        -->
+
+        <!-- Service Booking Sequence -->
+        <record id="sequence_service_booking" model="ir.sequence">
+            <field name="name">Service Booking Sequence</field>
+            <field name="code">service.booking</field>
+            <field name="prefix">BOOK/%(year)s/</field>
+            <!--
+            PREFIX INTERPOLATION:
+                %(year)s → Current year (2026)
+                %(month)s → Current month (01-12)
+                %(day)s → Current day (01-31)
+                Result: "BOOK/2026/0001", "BOOK/2026/0002", ...
+
+            WHY INCLUDE YEAR:
+                - Sequences can be reset annually
+                - Easier to identify old vs new bookings
+                - Common business practice
+            -->
+            <field name="padding">4</field>
+            <!--
+            PADDING:
+                4 → 0001, 0002, ..., 9999
+                5 → 00001, 00002, ..., 99999
+
+            WHY 4:
+                - Handles up to 9,999 bookings per year
+                - Good balance of readability and capacity
+                - Can be changed later if needed
+            -->
+            <field name="number_next">1</field>
+            <field name="number_increment">1</field>
+            <field name="implementation">standard</field>
+            <!--
+            IMPLEMENTATION OPTIONS:
+                'standard': Fast, may have gaps if transaction rolls back
+                'no_gap': Slower, guaranteed sequential (use for legal docs)
+
+            WHY STANDARD:
+                - Bookings are not legal documents
+                - Performance matters for high-volume booking
+                - Gaps are acceptable in booking references
+
+            WHEN TO USE no_gap:
+                - Invoices (legal requirement in some countries)
+                - Legal contracts
+                - Government-mandated numbering
+            -->
+        </record>
+
+    </data>
+</odoo>

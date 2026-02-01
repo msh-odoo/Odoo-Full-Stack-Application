@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ================================================================== -->
+    <!-- PORTAL MENU: Add "My Bookings" to Customer Portal -->
+    <!-- ================================================================== -->
+    <!--
+    Portal Menu Integration
+    
+    PORTAL MENU STRUCTURE:
+    - Extends portal.portal_my_home template
+    - Adds "My Bookings" counter and link
+    - Shows booking count badge
+    - Follows standard portal UI patterns
+    
+    XPATH PATTERN:
+    - position="inside": Add content inside target element
+    - target: div with o_portal_docs class
+    - Adds a new card to portal home page
+    -->
+    
+    <template id="portal_my_home_menu_booking" name="Portal My Home: Booking Menu" inherit_id="portal.portal_my_home" priority="30">
+        <xpath expr="//div[hasclass('o_portal_docs')]" position="inside">
+            <t t-call="portal.portal_docs_entry">
+                <t t-set="title">Bookings</t>
+                <t t-set="url" t-value="'/my/bookings'"/>
+                <t t-set="placeholder_count" t-value="'booking_count'"/>
+            </t>
+        </xpath>
+    </template>
+
+    <!-- ================================================================== -->
+    <!-- PORTAL BREADCRUMBS: Add Bookings to Portal Navigation -->
+    <!-- ================================================================== -->
+    <!--
+    Breadcrumb Integration
+    
+    Adds booking-specific breadcrumbs to portal pages.
+    Shows hierarchical navigation: Home > Bookings > Details
+    
+    CONDITIONAL RENDERING:
+    - page_name == 'booking': Active on booking pages
+    - Highlights current page in navigation
+    -->
+    
+    <template id="portal_breadcrumbs_booking" name="Portal Breadcrumbs: Bookings" inherit_id="portal.portal_breadcrumbs" priority="30">
+        <xpath expr="//ol[hasclass('o_portal_submenu')]" position="inside">
+            <li t-if="page_name == 'booking' or booking" t-attf-class="breadcrumb-item #{'active ' if not booking else ''}">
+                <a t-if="booking" href="/my/bookings">Bookings</a>
+                <t t-else="">Bookings</t>
+            </li>
+            <li t-if="booking" class="breadcrumb-item active">
+                <span t-field="booking.name"/>
+            </li>
+        </xpath>
+    </template>
+
+</odoo>

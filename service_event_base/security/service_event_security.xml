@@ -1,0 +1,322 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ================================================================== -->
+    <!-- SECURITY GROUPS -->
+    <!-- ================================================================== -->
+    <!--
+    WHAT ARE SECURITY GROUPS?
+        Groups define sets of users with similar permissions.
+        Think of groups as "roles" - Manager, Employee, Customer, etc.
+
+    WHY USE GROUPS?
+        - Organize users by responsibility
+        - Apply permissions to many users at once
+        - Maintain security consistently
+        - Scale access control easily
+
+    GROUP HIERARCHY:
+        Groups can inherit from other groups using implied_ids.
+        Example: Service Manager implies Service User
+        - Managers get ALL User permissions + extra permissions
+        - Users get basic permissions only
+
+    ODOO STANDARD GROUPS:
+        base.group_user: Internal User (employees)
+        base.group_system: Settings (administrators)
+        base.group_public: Public (website visitors)
+
+    OUR GROUPS:
+        service_event_user: Basic access (view published events, manage own bookings)
+        service_event_manager: Full access (manage all events, all bookings, settings)
+    -->
+
+    <!-- ================================================================== -->
+    <!-- MODULE CATEGORY & PRIVILEGE -->
+    <!-- ================================================================== -->
+    <!--
+    ODOO 19 SECURITY ARCHITECTURE:
+        In Odoo 19, the security group hierarchy changed:
+
+        OLD (Odoo ≤18):
+            res.groups → category_id → ir.module.category
+
+        NEW (Odoo 19+):
+            res.groups → privilege_id → res.groups.privilege → category_id → ir.module.category
+
+        WHY THE CHANGE:
+            - Better organization of related groups (User, Manager, Admin)
+            - Clearer permission hierarchy
+            - Improved UI for user management
+            - Groups that belong to same privilege appear together
+
+        HOW IT WORKS:
+            1. Create ir.module.category (top-level category like "Sales", "Services")
+            2. Create res.groups.privilege (privilege like "Sales Access")
+            3. Assign privilege.category_id = module category
+            4. Create res.groups with privilege_id = privilege
+            5. Groups with same privilege are displayed together in UI
+    -->
+
+    <!-- Category for our module -->
+    <record id="module_category_service_events" model="ir.module.category">
+        <field name="name">Service Events</field>
+        <field name="description">Manage service events and bookings</field>
+        <field name="sequence">20</field>
+    </record>
+
+    <!-- Privilege for Service Event access -->
+    <record id="res_groups_privilege_service_events" model="res.groups.privilege">
+        <field name="name">Service Events</field>
+        <field name="description">Access to service event management</field>
+        <field name="placeholder">No access</field>
+        <field name="sequence">10</field>
+        <field name="category_id" ref="module_category_service_events"/>
+    </record>
+
+    <!-- ================================================================== -->
+    <!-- SERVICE USER GROUP (Basic Access) -->
+    <!-- ================================================================== -->
+    <!--
+    WHO: Regular employees, frontdesk staff, booking agents
+    CAN DO:
+        - View published events
+        - Create bookings for customers
+        - View own created bookings
+        - Update bookings they created
+        - Cannot delete events/bookings
+        - Cannot see draft or cancelled events
+        - Cannot access business metrics
+
+    TYPICAL USE CASE:
+        Reception staff who take bookings over phone
+        Sales team who register customers for events
+    -->
+    <record id="group_service_event_user" model="res.groups">
+        <field name="name">Service User</field>
+        <field name="privilege_id" ref="res_groups_privilege_service_events"/>
+        <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+    </record>
+
+    <!-- ================================================================== -->
+    <!-- SERVICE MANAGER GROUP (Full Access) -->
+    <!-- ================================================================== -->
+    <!--
+    WHO: Event coordinators, administrators, business owners
+    CAN DO:
+        - Full CRUD on all events (including drafts, cancelled)
+        - Full CRUD on all bookings
+        - Manage categories and tags
+        - Access business metrics
+        - Manage pricing and discounts
+        - Control event lifecycle
+        - See all data regardless of creator
+
+    TYPICAL USE CASE:
+        Event managers who create and manage events
+        Administrators who configure the system
+        Business owners who need full visibility
+
+    INHERITANCE:
+        implied_ids includes Service User, so managers get:
+        - All User permissions +
+        - Additional manager-only permissions
+    -->
+    <record id="group_service_event_manager" model="res.groups">
+        <field name="name">Service Manager</field>
+        <field name="privilege_id" ref="res_groups_privilege_service_events"/>
+        <field name="implied_ids" eval="[(4, ref('group_service_event_user'))]"/>
+    </record>
+
+    <!-- ================================================================== -->
+    <!-- RECORD RULES (Row-Level Security) -->
+    <!-- ================================================================== -->
+    <!--
+    WHAT ARE RECORD RULES?
+        Filters that control WHICH records a user can access.
+        Even if a user has READ permission on a model,
+        record rules determine WHICH specific records they can see.
+
+    HOW THEY WORK:
+        domain: Odoo domain expression (like search filters)
+        - [('state', '=', 'published')] = Only published records
+        - [('create_uid', '=', user.id)] = Only records I created
+        - [(1, '=', 1)] = All records (no filter)
+
+        perm_read, perm_write, perm_create, perm_delete:
+        - True: Rule applies to this operation
+        - False: Rule doesn't apply to this operation
+
+    MULTIPLE RULES:
+        - For SAME group: Rules are OR'ed (any rule matches = access granted)
+        - For DIFFERENT groups: All applicable rules must pass
+
+    GLOBAL vs GROUP-SPECIFIC:
+        global="True": Applies to ALL users (even admins)
+        global="False" + groups: Applies only to specified groups
+    -->
+
+    <!-- ================================================================== -->
+    <!-- SERVICE EVENT RULES -->
+    <!-- ================================================================== -->
+
+    <!-- Rule: Service Users - See Only Published Events -->
+    <record id="service_event_user_rule" model="ir.rule">
+        <field name="name">Service Event: User - Published Only</field>
+        <field name="model_id" ref="model_service_event"/>
+        <field name="domain_force">[('state', '=', 'published')]</field>
+        <field name="groups" eval="[(4, ref('group_service_event_user'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <!--
+    EXPLAINED:
+        - Service Users can only READ published events
+        - They CANNOT see draft, cancelled, or completed events
+        - They CANNOT create, modify, or delete events
+        - Managers are NOT restricted by this rule (they have their own rule)
+
+    BUSINESS LOGIC:
+        Basic staff should only see events that are ready for booking.
+        They shouldn't see events being prepared or already finished.
+    -->
+
+    <!-- Rule: Service Managers - See All Events -->
+    <record id="service_event_manager_rule" model="ir.rule">
+        <field name="name">Service Event: Manager - All Events</field>
+        <field name="model_id" ref="model_service_event"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_service_event_manager'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+    <!--
+    EXPLAINED:
+        - [(1, '=', 1)] = TRUE = No filter = All records
+        - Managers can see events in ANY state
+        - Full CRUD permissions
+        - Can manage event lifecycle
+
+    WHY SEPARATE RULES:
+        Users and Managers are in DIFFERENT groups, so their rules
+        are independent. Manager rule overrides User rule for managers.
+    -->
+
+    <!-- ================================================================== -->
+    <!-- SERVICE BOOKING RULES -->
+    <!-- ================================================================== -->
+
+    <!-- Rule: Service Users - See Only Own Bookings -->
+    <record id="service_booking_user_rule" model="ir.rule">
+        <field name="name">Service Booking: User - Own Bookings Only</field>
+        <field name="model_id" ref="model_service_booking"/>
+        <field name="domain_force">[('create_uid', '=', user.id)]</field>
+        <field name="groups" eval="[(4, ref('group_service_event_user'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <!--
+    EXPLAINED:
+        - create_uid = The user who created the record (magical field)
+        - user.id = Current logged-in user
+        - Users can only see bookings THEY created
+        - Can create new bookings
+        - Can modify bookings they created
+        - CANNOT delete bookings (only cancel via workflow)
+
+    BUSINESS LOGIC:
+        Staff member A shouldn't see bookings created by staff member B.
+        Protects customer privacy.
+        Each staff sees only their own work.
+
+    REAL-WORLD SCENARIO:
+        - Sarah (reception) creates booking for Customer X
+        - Tom (reception) creates booking for Customer Y
+        - Sarah sees only Customer X's booking
+        - Tom sees only Customer Y's booking
+        - Manager sees both
+    -->
+
+    <!-- Rule: Service Managers - See All Bookings -->
+    <record id="service_booking_manager_rule" model="ir.rule">
+        <field name="name">Service Booking: Manager - All Bookings</field>
+        <field name="model_id" ref="model_service_booking"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_service_event_manager'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+    <!--
+    EXPLAINED:
+        - Managers see ALL bookings regardless of creator
+        - Full CRUD permissions
+        - Can delete bookings if needed
+        - Needed for reporting, customer service, corrections
+    -->
+
+    <!-- ================================================================== -->
+    <!-- CATEGORY & TAG RULES -->
+    <!-- ================================================================== -->
+
+    <!-- Rule: Categories - Everyone Can Read -->
+    <record id="service_event_category_all_rule" model="ir.rule">
+        <field name="name">Service Event Category: All Users Read</field>
+        <field name="model_id" ref="model_service_event_category"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_service_event_user'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <!--
+    EXPLAINED:
+        - All Service Users can READ categories
+        - Needed to categorize events when creating/viewing
+        - Cannot modify categories (that's manager-only)
+    -->
+
+    <!-- Rule: Categories - Managers Full Access -->
+    <record id="service_event_category_manager_rule" model="ir.rule">
+        <field name="name">Service Event Category: Manager - Full Access</field>
+        <field name="model_id" ref="model_service_event_category"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_service_event_manager'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+
+    <!-- Rule: Tags - Everyone Can Read -->
+    <record id="service_event_tag_all_rule" model="ir.rule">
+        <field name="name">Service Event Tag: All Users Read</field>
+        <field name="model_id" ref="model_service_event_tag"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_service_event_user'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <!-- Rule: Tags - Managers Full Access -->
+    <record id="service_event_tag_manager_rule" model="ir.rule">
+        <field name="name">Service Event Tag: Manager - Full Access</field>
+        <field name="model_id" ref="model_service_event_tag"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_service_event_manager'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+
+</odoo>

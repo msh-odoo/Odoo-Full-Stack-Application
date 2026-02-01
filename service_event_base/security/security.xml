@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Security Groups Definition
+
+PURPOSE:
+    Define user groups for role-based access control (RBAC).
+    Groups determine what users can see and do in the system.
+
+ODOO SECURITY MODEL:
+    Three-layer security:
+    1. Groups: User role assignment (defined here)
+    2. Access Rights: Model-level CRUD permissions (ir.model.access.csv)
+    3. Record Rules: Row-level security filters (domain-based)
+
+GROUP HIERARCHY:
+    - Use category_id to organize related groups
+    - Use implied_ids for inheritance (manager implies user)
+    - Base groups on business roles, not technical permissions
+
+WHY XML NOT PYTHON:
+    - Declarative security is auditable
+    - Can be easily reviewed and exported
+    - Odoo provides UI for managing groups
+    - Supports noupdate flag for customization
+
+THIS FILE WILL BE COMPLETED IN COMMIT 5 (Security).
+Placeholder created for manifest dependency.
+-->
+<odoo>
+    <data noupdate="0">
+        <!--
+        noupdate="0" means:
+            - Data will be updated on module upgrade
+            - Changes in XML will overwrite database
+            - Used for critical security definitions
+
+        noupdate="1" would mean:
+            - Data only created on first install
+            - User customizations preserved on upgrade
+            - Used for demo data or default records
+        -->
+
+        <!-- Placeholder: Security groups will be defined in Commit 5 -->
+
+    </data>
+</odoo>

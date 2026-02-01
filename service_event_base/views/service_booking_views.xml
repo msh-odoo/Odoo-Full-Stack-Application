@@ -1,0 +1,289 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Service Booking Views
+
+PURPOSE:
+    Define user interface views for service.booking model.
+
+COMMIT 2 SCOPE:
+    Basic tree and form views for testing models.
+    Full-featured views with state buttons will be enhanced in Commit 6.
+-->
+<odoo>
+    <data>
+
+        <!-- Service Booking List View -->
+        <record id="view_service_booking_list" model="ir.ui.view">
+            <field name="name">service.booking.list</field>
+            <field name="model">service.booking</field>
+            <field name="arch" type="xml">
+                <list string="Service Bookings" decoration-info="state=='draft'"
+                      decoration-success="state=='confirmed'" decoration-muted="state=='cancelled'"
+                      decoration-warning="state=='waitlisted'">
+                    <field name="booking_number"/>
+                    <field name="partner_id"/>
+                    <field name="event_id"/>
+                    <field name="booking_date"/>
+                    <field name="amount"/>
+                    <field name="currency_id" optional="hide"/>
+                    <field name="is_waitlisted" optional="show"/>
+                    <field name="waitlist_position" optional="show" invisible="not is_waitlisted"/>
+                    <field name="state" widget="badge" decoration-info="state=='draft'"
+                           decoration-success="state in ('confirmed', 'done')"
+                           decoration-danger="state=='cancelled'"
+                           decoration-warning="state=='waitlisted'"/>
+                </list>
+            </field>
+        </record>
+
+        <!-- Service Booking Kanban View -->
+        <record id="view_service_booking_kanban" model="ir.ui.view">
+            <field name="name">service.booking.kanban</field>
+            <field name="model">service.booking</field>
+            <field name="arch" type="xml">
+                <kanban default_group_by="state" class="o_kanban_small_column">
+                    <field name="id"/>
+                    <field name="booking_number"/>
+                    <field name="partner_id"/>
+                    <field name="event_id"/>
+                    <field name="booking_date"/>
+                    <field name="amount"/>
+                    <field name="currency_id"/>
+                    <field name="state"/>
+                    <field name="is_waitlisted"/>
+                    <field name="waitlist_position"/>
+                    <field name="color"/>
+
+                    <templates>
+                        <t t-name="card">
+                            <div class="oe_kanban_card oe_kanban_global_click">
+                                <div class="o_kanban_card_header">
+                                    <div class="o_kanban_card_header_title">
+                                        <div class="o_primary">
+                                            <strong><field name="booking_number"/></strong>
+                                        </div>
+                                        <div class="o_secondary">
+                                            <field name="partner_id"/>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="o_kanban_card_content mt-2">
+                                    <div class="row">
+                                        <div class="col-12 mb-1">
+                                            <i class="fa fa-calendar-check-o me-1"/>
+                                            <field name="event_id"/>
+                                        </div>
+                                        <div class="col-6">
+                                            <i class="fa fa-calendar me-1"/>
+                                            <field name="booking_date"/>
+                                        </div>
+                                        <div class="col-6 text-end">
+                                            <strong><field name="amount" widget="monetary"/></strong>
+                                        </div>
+                                    </div>
+
+                                    <t t-if="record.is_waitlisted.raw_value">
+                                        <div class="row mt-2">
+                                            <div class="col-12">
+                                                <span class="badge badge-warning">
+                                                    <i class="fa fa-hourglass-half"/>
+                                                    Waitlist #<field name="waitlist_position"/>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </t>
+                                </div>
+
+                                <div class="o_kanban_card_footer mt-2">
+                                    <div class="o_kanban_footer_left">
+                                        <span class="badge"
+                                              t-attf-class="badge-{{state == 'draft' ? 'secondary' : state == 'confirmed' ? 'primary' : state == 'done' ? 'success' : state == 'waitlisted' ? 'warning' : 'danger'}}">
+                                            <t t-esc="state"/>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </t>
+                    </templates>
+                </kanban>
+            </field>
+        </record>
+
+        <!-- Service Booking Calendar View -->
+        <record id="view_service_booking_calendar" model="ir.ui.view">
+            <field name="name">service.booking.calendar</field>
+            <field name="model">service.booking</field>
+            <field name="arch" type="xml">
+                <calendar string="Booking Calendar"
+                          date_start="booking_date"
+                          mode="month"
+                          color="state"
+                          quick_create="0">
+                    <field name="partner_id"/>
+                    <field name="event_id"/>
+                    <field name="amount"/>
+                    <field name="state" filters="1" invisible="1"/>
+                </calendar>
+            </field>
+        </record>
+
+        <!-- Service Booking Graph View -->
+        <record id="view_service_booking_graph" model="ir.ui.view">
+            <field name="name">service.booking.graph</field>
+            <field name="model">service.booking</field>
+            <field name="arch" type="xml">
+                <graph string="Booking Analysis" type="bar" sample="1">
+                    <field name="event_id" type="row"/>
+                    <field name="amount" type="measure"/>
+                </graph>
+            </field>
+        </record>
+
+        <!-- Service Booking Pivot View -->
+        <record id="view_service_booking_pivot" model="ir.ui.view">
+            <field name="name">service.booking.pivot</field>
+            <field name="model">service.booking</field>
+            <field name="arch" type="xml">
+                <pivot string="Booking Pivot Analysis" sample="1">
+                    <field name="event_id" type="row"/>
+                    <field name="state" type="col"/>
+                    <field name="amount" type="measure"/>
+                </pivot>
+            </field>
+        </record>
+
+        <!-- Service Booking Search View -->
+        <record id="view_service_booking_search" model="ir.ui.view">
+            <field name="name">service.booking.search</field>
+            <field name="model">service.booking</field>
+            <field name="arch" type="xml">
+                <search string="Search Bookings">
+                    <!-- Search Fields -->
+                    <field name="booking_number" string="Booking #"/>
+                    <field name="partner_id" string="Customer"/>
+                    <field name="event_id" string="Event"/>
+
+                    <!-- Predefined Filters -->
+                    <filter string="Draft" name="filter_draft" domain="[('state', '=', 'draft')]"/>
+                    <filter string="Confirmed" name="filter_confirmed" domain="[('state', '=', 'confirmed')]"/>
+                    <filter string="Waitlisted" name="filter_waitlisted" domain="[('state', '=', 'waitlisted')]"/>
+                    <filter string="Done" name="filter_done" domain="[('state', '=', 'done')]"/>
+                    <separator/>
+                    <filter string="My Bookings" name="filter_my_bookings"
+                            domain="[('create_uid', '=', uid)]"/>
+                    <filter string="Today" name="filter_today"
+                            domain="[('booking_date', '=', context_today().strftime('%Y-%m-%d'))]"/>
+                    <filter string="This Week" name="filter_this_week"
+                            domain="[('booking_date', '&gt;=', (context_today()-relativedelta(weeks=1)).strftime('%Y-%m-%d'))]"/>
+                    <filter string="This Month" name="filter_this_month"
+                            domain="[('booking_date', '&gt;=', (context_today()-relativedelta(months=1)).strftime('%Y-%m-%d'))]"/>
+
+                    <!-- Group By -->
+                    <group>
+                        <filter string="Event" name="group_event" context="{'group_by': 'event_id'}"/>
+                        <filter string="Customer" name="group_partner" context="{'group_by': 'partner_id'}"/>
+                        <filter string="State" name="group_state" context="{'group_by': 'state'}"/>
+                        <separator/>
+                        <filter string="Booking Date" name="group_booking_date" context="{'group_by': 'booking_date:month'}"/>
+                        <filter string="Company" name="group_company" context="{'group_by': 'company_id'}"/>
+                    </group>
+
+                    <!-- Search Panel -->
+                    <searchpanel>
+                        <field name="state" icon="fa-filter" enable_counters="1" select="multi"/>
+                    </searchpanel>
+                </search>
+            </field>
+        </record>
+
+        <!-- Service Booking Form View -->
+        <record id="view_service_booking_form" model="ir.ui.view">
+            <field name="name">service.booking.form</field>
+            <field name="model">service.booking</field>
+            <field name="arch" type="xml">
+                <form string="Service Booking">
+                    <header>
+                        <button name="action_confirm" string="Confirm" type="object"
+                                class="oe_highlight" invisible="state not in ('draft', 'waitlisted')"/>
+                        <button name="action_promote_from_waitlist" string="Promote from Waitlist" type="object"
+                                class="oe_highlight" invisible="state != 'waitlisted'"
+                                groups="service_event_base.group_service_event_manager"/>
+                        <button name="action_done" string="Done" type="object"
+                                class="oe_highlight" invisible="state != 'confirmed'"
+                                groups="service_event_base.group_service_event_manager"/>
+                        <button name="action_cancel" string="Cancel" type="object"
+                                invisible="state in ('done', 'cancelled')"/>
+                        <button name="action_draft" string="Reset to Draft" type="object"
+                                invisible="state == 'draft'"
+                                groups="service_event_base.group_service_event_manager"/>
+                        <field name="state" widget="statusbar" statusbar_visible="draft,confirmed,done"/>
+                    </header>
+                    <sheet>
+                        <div class="alert alert-warning" role="alert" invisible="not is_waitlisted">
+                            <strong>Waitlisted:</strong> You are #<field name="waitlist_position" class="oe_inline"/> in line.
+                            You will be automatically confirmed when a spot opens.
+                        </div>
+                        <div class="oe_title">
+                            <h1>
+                                <field name="booking_number" readonly="1"/>
+                            </h1>
+                        </div>
+                        <group>
+                            <group>
+                                <field name="partner_id"/>
+                                <field name="event_id"/>
+                                <field name="booking_date"/>
+                            </group>
+                            <group>
+                                <field name="amount"/>
+                                <field name="currency_id" options="{'no_create': True}"/>
+                                <field name="company_id" options="{'no_create': True}"/>
+                            </group>
+                        </group>
+                        <group string="Audit Information" groups="base.group_no_one">
+                            <group>
+                                <label for="create_uid" string="Created"/>
+                                <div>
+                                    <field name="create_uid" readonly="1" class="oe_inline"/>
+                                    <span> on </span>
+                                    <field name="create_date" readonly="1" class="oe_inline"/>
+                                </div>
+                            </group>
+                            <group>
+                                <label for="write_uid" string="Last Modified"/>
+                                <div>
+                                    <field name="write_uid" readonly="1" class="oe_inline"/>
+                                    <span> on </span>
+                                    <field name="write_date" readonly="1" class="oe_inline"/>
+                                </div>
+                            </group>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- Service Booking Action -->
+        <record id="action_service_booking" model="ir.actions.act_window">
+            <field name="name">Service Bookings</field>
+            <field name="res_model">service.booking</field>
+            <field name="view_mode">kanban,list,calendar,form,graph,pivot</field>
+            <field name="search_view_id" ref="view_service_booking_search"/>
+            <field name="context">{
+                'search_default_filter_confirmed': 1,
+            }</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Create your first booking
+                </p>
+                <p>
+                    Bookings represent customer registrations for events.<br/>
+                    Track payments, manage waitlists, and monitor attendance.
+                </p>
+            </field>
+        </record>
+
+    </data>
+</odoo>
+
