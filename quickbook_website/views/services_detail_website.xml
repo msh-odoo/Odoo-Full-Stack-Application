@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <template id="services_detail_website" name="Service Detail">
+        <t t-call="website.layout">
+            <div id="wrap" class="oe_structure">
+                <div class="container py-5">
+                    <h1 class="mb-4 text-center">
+                        <t t-out="service.name" />
+                    </h1>
+                    <t t-if="service.category_id">
+                        <div class="text-center mb-3">
+                            <span class="badge bg-primary">
+                                <t t-out="service.category_id.name" />
+                            </span>
+                        </div>
+                    </t>
+                    <div class="card mb-4 shadow-sm">
+                        <div class="card-body">
+                            <h5>Description</h5>
+                            <t t-if="service.description">
+                                <t t-out="service.description" />
+                            </t>
+                            <t t-else="">
+                                <em class="text-muted">No description available.</em>
+                            </t>
+                        </div>
+                    </div>
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <div class="card text-center shadow-sm">
+                                <div class="card-body">
+                                    <h6>Price</h6>
+                                    <div class="fs-4 fw-bold text-success">
+                                        <t t-out="service.price" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card text-center shadow-sm">
+                                <div class="card-body">
+                                    <h6>Duration</h6>
+                                    <div class="fs-5">
+                                        <t t-out="service.duration" /> hrs </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card text-center shadow-sm">
+                                <div class="card-body">
+                                    <h6>Capacity</h6>
+                                    <div class="fs-5">
+                                        <t t-out="service.capacity" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <t t-if="service.tag_ids">
+                        <div class="mb-4">
+                            <h5>Tags</h5>
+                            <t t-foreach="service.tag_ids" t-as="tag">
+                                <span class="badge bg-light text-dark border me-1">
+                                    <t t-out="tag.name" />
+                                </span>
+                            </t>
+                        </div>
+                    </t>
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h4 class="mb-3">Bookings</h4>
+
+                            <t t-if="service.booking_ids">
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-hover align-middle">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Booking Reference</th>
+                                                <th>Customer</th>
+                                                <th>Date</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <t t-foreach="service.booking_ids" t-as="booking">
+                                                <tr>
+                                                    <td>
+                                                        <t t-out="booking.name or '-'" />
+                                                    </td>
+                                                    <td>
+                                                        <t
+                                                            t-out="booking.partner_id.name if booking.partner_id else '-'" />
+                                                    </td>
+                                                    <td>
+                                                        <t t-out="booking.booking_date or '-'" />
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-secondary">
+                                                            <t t-out="booking.state" />
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            </t>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </t>
+                            <t t-else="">
+                                <p class="text-muted mb-0">
+                                    No bookings available for this service.
+                                </p>
+                            </t>
+                        </div>
+                    </div>
+                    <div class="text-center mt-4">
+                        <a href="/services" class="btn btn-outline-secondary">
+                            ← Back to Services
+                        </a>
+                    </div>
+
+                </div>
+            </div>
+        </t>
+    </template>
+</odoo>

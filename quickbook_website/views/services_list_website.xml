@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <template id="services_list_website" name="Services Listing">
+        <t t-call="website.layout">
+            <div id="wrap" class="oe_structure">
+                <div class="container py-4">
+                    <h1 class="mb-4 text-center">Services</h1>
+                    <div class="row g-4">
+                        <t t-foreach="services" t-as="service">
+                            <div class="col-lg-4 col-md-6">
+                                <div class="card h-100 shadow-sm border-0">
+                                    <div class="card-body d-flex flex-column">
+                                        <t t-if="service.category_id">
+                                            <span class="badge bg-primary mb-2">
+                                                <t t-out="service.category_id.name" />
+                                            </span>
+                                        </t>
+                                        <h5 class="card-title">
+                                            <t t-out="service.name" />
+                                        </h5>
+                                        <div class="card-text text-muted mb-3">
+                                            <t t-if="service.description">
+                                                <t t-out="service.description" />
+                                            </t>
+                                            <t t-else="">
+                                                <em>No description available.</em>
+                                            </t>
+                                        </div>
+                                        <ul class="list-unstyled small text-muted mb-4">
+                                            <li> ⏱ Duration: <strong>
+                                                    <t t-out="service.duration" /> hrs </strong>
+                                            </li>
+                                            <li> 👥 Capacity: <strong>
+                                                    <t t-out="service.capacity" />
+                                                </strong>
+                                            </li>
+                                        </ul>
+                                        <t t-if="service.tag_ids">
+                                            <div class="mb-3">
+                                                <t t-foreach="service.tag_ids" t-as="tag">
+                                                    <span
+                                                        class="badge bg-light text-dark border me-1">
+                                                        <t t-out="tag.name" />
+                                                    </span>
+                                                </t>
+                                            </div>
+                                        </t>
+                                        <div
+                                            class="mt-auto d-flex justify-content-between align-items-center">
+                                            <div class="fs-5 fw-bold text-success">
+                                                <t t-out="service.price" />
+                                                <span class="fs-6 text-muted">/ service</span>
+                                            </div>
+                                            <a t-attf-href="/services/{{service.id}}" class="btn btn-outline-primary btn-sm">
+                                                More Details
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </t>
+                        <div class="d-flex justify-content-center mt-5">
+                            <t t-call="website.pager" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+</odoo>
