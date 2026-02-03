@@ -1,5 +1,5 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_invincible_event,access_invincible_event,model_invincible_event,base.group_user,1,1,1,1
 access_invincible_booking,access_invincible_booking,model_invincible_booking,base.group_user,1,1,1,1
-access_invincible_category,access_invincible_category,model_invincible_category,base.group_user,1,1,1,1
-access_invincible_tag,access_invincible_tag,model_invincible_tag,base.group_user,1,1,1,1
+access_invincible_event_category,access_invincible_event_category,model_invincible_event_category,base.group_user,1,1,1,1
+access_invincible_event_tag,access_invincible_event_tag,model_invincible_event_tag,base.group_user,1,1,1,1

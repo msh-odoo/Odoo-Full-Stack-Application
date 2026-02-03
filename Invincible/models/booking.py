@@ -14,7 +14,15 @@ class InvincibleBooking(models.Model):
     event_id = fields.Many2one("invincible.event", required=True)
 
     state = fields.Selection(
-        default="draft"
+        [
+            ('draft', 'Draft'),
+            ('confirmed', 'Confirmed'),
+            ('completed', 'Completed'),
+            ('cancelled', 'Cancelled'),
+        ],
+        string="Status",
+        default='draft',
+        tracking=True
     )
 
     booking_date = fields.Datetime(default=fields.Datetime.now)
@@ -41,7 +49,6 @@ class InvincibleBooking(models.Model):
             if rec.booking_date < fields.Datetime.now():
                 raise ValidationError("Cannot book past dates")
 
-    # need to set sql constraints
     # _sql_constraints = [
     #     (
     #         "unique_partner_event",

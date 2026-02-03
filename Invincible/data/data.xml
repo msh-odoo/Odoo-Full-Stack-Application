@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="event_tag_1" model="invincible.event.tag">
+        <field name="name">Community</field>
+    </record>
+
+    <record id="event_tag_2" model="invincible.event.tag">
+        <field name="name">Training</field>
+    </record>
+
+    <record id="event_tag_3" model="invincible.event.tag">
+        <field name="name">Health</field>
+    </record>
+
+    <record id="event_tag_4" model="invincible.event.tag">
+        <field name="name">Charity</field>
+    </record>
+
+    <record id="event_tag_5" model="invincible.event.tag">
+        <field name="name">Education</field>
+    </record>
+
+    <record id="event_category_1" model="invincible.event.category">
+        <field name="name">Health Services</field>
+    </record>
+
+    <record id="event_category_2" model="invincible.event.category">
+        <field name="name">Workshops</field>
+    </record>
+
+    <record id="event_category_3" model="invincible.event.category">
+        <field name="name">Donation Drives</field>
+    </record>
+
+    <record id="event_category_4" model="invincible.event.category">
+        <field name="name">Education Programs</field>
+    </record>
+
+    <record model="invincible.event" id="event_1">
+        <field name="name">Free Health Camp</field>
+        <field name="description">Community health checkup and consultation</field>
+        <field name="price">0.0</field>
+        <field name="category_id" ref="event_category_1"/>
+        <field name="tag_ids" eval="[(6, 0, [ref('event_tag_1'), ref('event_tag_3')])]"/>
+    </record>
+
+    <record model="invincible.event" id="event_2">
+        <field name="name">Women Empowerment Workshop</field>
+        <field name="description">Skill development and awareness program</field>
+        <field name="price">500.0</field>
+        <field name="category_id" ref="event_category_2"/>
+        <field name="tag_ids" eval="[(6, 0, [ref('event_tag_1'), ref('event_tag_2')])]"/>
+    </record>
+
+    <record model="invincible.event" id="event_3">
+        <field name="name">Blood Donation Drive</field>
+        <field name="description">Annual blood donation initiative</field>
+        <field name="price">0.0</field>
+        <field name="category_id" ref="event_category_3"/>
+        <field name="tag_ids" eval="[(6, 0, [ref('event_tag_3'), ref('event_tag_4')])]"/>
+    </record>
+
+    <record model="invincible.event" id="event_4">
+        <field name="name">Education Sponsorship Program</field>
+        <field name="description">Support education for underprivileged children</field>
+        <field name="price">1000.0</field>
+        <field name="category_id" ref="event_category_4"/>
+        <field name="tag_ids" eval="[(6, 0, [ref('event_tag_5'), ref('event_tag_4')])]"/>
+    </record>
+
+</odoo>

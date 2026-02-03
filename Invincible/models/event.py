@@ -11,8 +11,8 @@ class InvincibleEvent(models.Model):
     price = fields.Float()
     active = fields.Boolean(default=True)
 
-    category_id = fields.Many2one("invincible.category")
-    tag_ids = fields.Many2many("invincible.tag")
+    category_id = fields.Many2one("invincible.event.category")
+    tag_ids = fields.Many2many("invincible.event.tag")
 
     company_id = fields.Many2one(
         "res.company",
