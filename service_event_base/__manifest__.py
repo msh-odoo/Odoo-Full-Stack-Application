@@ -7,6 +7,7 @@
     'depends': ['base', 'mail', 'event'],
     'data': [
         'views/event_service_menu_view.xml',
+        'views/event_service.xml',
         'security/ir.model.access.csv'
     ],
     'installable': True,

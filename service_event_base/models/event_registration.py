@@ -19,6 +19,11 @@ class EventRegistration(models.Model):
     currency_id = fields.Many2one('res.currency', string='Currency', related='service_id.currency_id', readonly=True)
     company_id = fields.Many2one('res.company', string='Company', related='service_id.company_id', store=True, readonly=True)
 
+    _booking_service_check = models.Constraint(
+        'unique (service_id, partner_id)',
+        "Each partner can register only once for the same event service."
+    )
+
     # Compute fields
     @api.depends('service_id')
     def _compute_booking_amount(self):
