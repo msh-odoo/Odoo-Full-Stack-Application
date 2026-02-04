@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="service_event_listing_page" name="Service Event Listing">
+        <t t-call="website.layout">
+            <t t-if="length" t-foreach="service_events" t-as="service_event">
+                <a t-attf-href="service_event/#{service_event.id}">
+                    <div class="card" style="width: 18rem;">
+                        <div class="card-body">
+                            <t class="card-title" t-out="service_event.name"/>
+                        </div>
+                    </div>
+                </a>
+            </t>
+            <t t-else="">
+                <h2>No events available.</h2>
+            </t>
+        </t>
+    </template>
+    <template id="service_event_page" name="Service Event page">
+        <t t-call="website.layout">
+            <t t-out="service_event.name"/>
+        </t>
+    </template>
+</odoo>

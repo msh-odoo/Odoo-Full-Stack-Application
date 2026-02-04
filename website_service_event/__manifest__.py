@@ -13,7 +13,7 @@
         'website',
     ],
     'data': [
-        ''
+        'views/website_service_event_templates.xml'
     ],
     'demo': [
         ''
